@@ -12,15 +12,6 @@ services:
           memory: 100m
           cpus: '0.2'
 
-  mongo:
-    image: mongo:6.0
-    ports:
-      - "27017:27017"
-    deploy:
-      resources:
-        limits:
-          memory: 300m
-          cpus: '0.4'
 
   postgres:
     image: postgres:15
