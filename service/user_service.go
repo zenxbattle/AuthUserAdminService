@@ -74,14 +74,14 @@ func (s *AuthUserAdminService) createGrpcError(code codes.Code, message string, 
 
 // RegisterUser handles user registration and sends verification OTP
 func (s *AuthUserAdminService) RegisterUser(ctx context.Context, req *authUserAdminService.RegisterUserRequest) (*authUserAdminService.RegisterUserResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting RegisterUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting RegisterUser", map[string]any{
 		"method":    "RegisterUser",
 		"email":     req.Email,
 		"operation": "create_user",
 	}, "SERVICE", nil)
 
 	if req.Password != req.ConfirmPassword {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Password mismatch", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Password mismatch", map[string]any{
 			"method":    "RegisterUser",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_REG_PASSWORD_MISMATCH,
@@ -89,7 +89,7 @@ func (s *AuthUserAdminService) RegisterUser(ctx context.Context, req *authUserAd
 		return nil, s.createGrpcError(codes.InvalidArgument, "The passwords entered do not match", customerrors.ERR_REG_PASSWORD_MISMATCH, nil)
 	}
 	if !repository.IsValidEmail(req.Email) {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid email", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid email", map[string]any{
 			"method":    "RegisterUser",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_REG_INVALID_EMAIL,
@@ -97,7 +97,7 @@ func (s *AuthUserAdminService) RegisterUser(ctx context.Context, req *authUserAd
 		return nil, s.createGrpcError(codes.InvalidArgument, "Please provide a valid email address", customerrors.ERR_REG_INVALID_EMAIL, nil)
 	}
 	if !repository.IsValidPassword(req.Password) {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid password format", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid password format", map[string]any{
 			"method":    "RegisterUser",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_REG_INVALID_PASSWORD,
@@ -105,9 +105,9 @@ func (s *AuthUserAdminService) RegisterUser(ctx context.Context, req *authUserAd
 		return nil, s.createGrpcError(codes.InvalidArgument, "Password must be at least 8 characters and include an uppercase letter and a number", customerrors.ERR_REG_INVALID_PASSWORD, nil)
 	}
 
-	userID, errorType, err := s.repo.CreateUser(req)
+	userId, errorType, err := s.repo.CreateUser(req)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to create user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to create user", map[string]any{
 			"method":    "RegisterUser",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -117,10 +117,10 @@ func (s *AuthUserAdminService) RegisterUser(ctx context.Context, req *authUserAd
 
 	// Invalidate non-admin caches for new user
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", userID),
-		fmt.Sprintf("ban_status:%s", userID),
-		fmt.Sprintf("following:%s", userID),
-		fmt.Sprintf("followers:%s", userID),
+		fmt.Sprintf("user_profile:id:%s", userId),
+		fmt.Sprintf("ban_status:%s", userId),
+		fmt.Sprintf("following:%s", userId),
+		fmt.Sprintf("followers:%s", userId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -128,16 +128,16 @@ func (s *AuthUserAdminService) RegisterUser(ctx context.Context, req *authUserAd
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User registered successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User registered successfully", map[string]any{
 		"method": "RegisterUser",
-		"userID": userID,
+		"userId": userId,
 		"email":  req.Email,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.RegisterUserResponse{
-		UserID: userID,
+		UserId: userId,
 		UserProfile: &authUserAdminService.UserProfile{
-			UserID:    userID,
+			UserId:    userId,
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
 			Email:     req.Email,
@@ -149,14 +149,14 @@ func (s *AuthUserAdminService) RegisterUser(ctx context.Context, req *authUserAd
 
 // LoginWithGoogle handles Google OAuth login
 func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUserAdminService.GoogleLoginRequest) (*authUserAdminService.LoginUserResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting LoginWithGoogle", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting LoginWithGoogle", map[string]any{
 		"method":    "LoginWithGoogle",
 		"operation": "google_login",
 	}, "SERVICE", nil)
 
 	token, err := s.googleCfg.Client(ctx, &oauth2.Token{AccessToken: req.IdToken}).Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid Google token", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid Google token", map[string]any{
 			"method":    "LoginWithGoogle",
 			"errorType": customerrors.ERR_GOOGLE_TOKEN_INVALID,
 		}, "SERVICE", err)
@@ -173,7 +173,7 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 		EmailVerified bool   `json:"email_verified"`
 	}
 	if err := json.NewDecoder(token.Body).Decode(&googleUser); err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to parse Google user info", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to parse Google user info", map[string]any{
 			"method":    "LoginWithGoogle",
 			"errorType": customerrors.ERR_GOOGLE_TOKEN_INVALID,
 		}, "SERVICE", err)
@@ -182,7 +182,7 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 
 	user, errorType, err := s.repo.GetUserByEmail(googleUser.Email)
 	if err != nil && errorType != "" {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error retrieving user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error retrieving user", map[string]any{
 			"method":    "LoginWithGoogle",
 			"email":     googleUser.Email,
 			"errorType": errorType,
@@ -192,7 +192,7 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 
 	if user.ID != "" {
 		if user.AuthType != "google" {
-			s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Login method conflict", map[string]any{
+			s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Login method conflict", map[string]any{
 				"method":    "LoginWithGoogle",
 				"email":     googleUser.Email,
 				"errorType": customerrors.ERR_LOGIN_METHOD_CONFLICT,
@@ -201,17 +201,17 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 		}
 		banStatusResp, errorType, err := s.repo.CheckBanStatus(user.ID)
 		if err != nil {
-			s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error checking ban status", map[string]any{
+			s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error checking ban status", map[string]any{
 				"method":    "LoginWithGoogle",
-				"userID":    user.ID,
+				"userId":    user.ID,
 				"errorType": errorType,
 			}, "SERVICE", err)
 			return nil, s.createGrpcError(codes.Internal, "Error checking ban status", errorType, err)
 		}
 		if banStatusResp.IsBanned {
-			s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Account banned", map[string]any{
+			s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Account banned", map[string]any{
 				"method":    "LoginWithGoogle",
-				"userID":    user.ID,
+				"userId":    user.ID,
 				"errorType": customerrors.ERR_LOGIN_ACCOUNT_BANNED,
 			}, "SERVICE", nil)
 			return nil, s.createGrpcError(codes.Unauthenticated, "Your account has been banned", customerrors.ERR_LOGIN_ACCOUNT_BANNED, nil)
@@ -225,7 +225,7 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 			Email:             googleUser.Email,
 			AuthType:          "google",
 			Role:              "USER",
-			PrimaryLanguageID: "js",
+			PrimaryLanguageId: "js",
 			Country:           "",
 			MuteNotifications: false,
 			TwoFactorEnabled:  false,
@@ -233,7 +233,7 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 
 		_, _, err := s.repo.CreateGoogleUser(registerReq)
 		if err != nil {
-			s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to create Google user", map[string]any{
+			s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to create Google user", map[string]any{
 				"method":    "LoginWithGoogle",
 				"email":     googleUser.Email,
 				"errorType": customerrors.ERR_REG_CREATION_FAILED,
@@ -243,7 +243,7 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 
 		user, _, err = s.repo.GetUserByEmail(googleUser.Email)
 		if err != nil {
-			s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to retrieve newly created user", map[string]any{
+			s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to retrieve newly created user", map[string]any{
 				"method":    "LoginWithGoogle",
 				"email":     googleUser.Email,
 				"errorType": customerrors.ERR_REG_CREATION_FAILED,
@@ -267,9 +267,9 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 
 	rtoken, _, err := utils.GenerateJWT(user.ID, "USER", s.jwtSecret, 7*24*time.Hour)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to generate refresh token", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to generate refresh token", map[string]any{
 			"method":    "LoginWithGoogle",
-			"userID":    user.ID,
+			"userId":    user.ID,
 			"errorType": customerrors.ERR_LOGIN_TOKEN_GEN_FAILED,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.Internal, "Failed to generate refresh token", customerrors.ERR_LOGIN_TOKEN_GEN_FAILED, err)
@@ -277,32 +277,32 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 
 	atoken, expiresIn, err := utils.GenerateJWT(user.ID, "USER", s.jwtSecret, 1*24*time.Hour)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to generate access token", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to generate access token", map[string]any{
 			"method":    "LoginWithGoogle",
-			"userID":    user.ID,
+			"userId":    user.ID,
 			"errorType": customerrors.ERR_LOGIN_TOKEN_GEN_FAILED,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.Internal, "Failed to generate access token", customerrors.ERR_LOGIN_TOKEN_GEN_FAILED, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Google login successful", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Google login successful", map[string]any{
 		"method": "LoginWithGoogle",
-		"userID": user.ID,
+		"userId": user.ID,
 		"email":  googleUser.Email,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.LoginUserResponse{
 		UserProfile: &authUserAdminService.UserProfile{
-			UserID:            user.ID,
+			UserId:            user.ID,
 			UserName:          user.UserName,
 			FirstName:         user.FirstName,
 			LastName:          user.LastName,
 			Email:             user.Email,
 			Role:              user.Role,
-			PrimaryLanguageID: user.PrimaryLanguageID,
+			PrimaryLanguageId: user.PrimaryLanguageId,
 			Country:           user.Country,
 			TwoFactorEnabled:  user.TwoFactorEnabled,
-			AvatarData:        user.AvatarData,
+			AvatarURL:         user.AvatarURL,
 			IsVerified:        user.IsVerified,
 			Socials:           &authUserAdminService.Socials{},
 			CreatedAt:         user.CreatedAt,
@@ -310,14 +310,14 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 		RefreshToken: rtoken,
 		AccessToken:  atoken,
 		ExpiresIn:    expiresIn,
-		UserID:       user.ID,
+		UserId:       user.ID,
 		Message:      "Login with Google successful",
 	}, nil
 }
 
 // LoginUser handles user login with JWT generation
 func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdminService.LoginUserRequest) (*authUserAdminService.LoginUserResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting LoginUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting LoginUser", map[string]any{
 		"method":    "LoginUser",
 		"email":     req.Email,
 		"operation": "email_login",
@@ -325,7 +325,7 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 
 	user, errorType, err := s.repo.GetUserByEmail(req.Email)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error retrieving user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error retrieving user", map[string]any{
 			"method":    "LoginUser",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -333,7 +333,7 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while verifying your credentials", errorType, err)
 	}
 	if user.ID == "" {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "User not found", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "User not found", map[string]any{
 			"method":    "LoginUser",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_USER_NOT_FOUND,
@@ -342,7 +342,7 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 	}
 
 	if user.AuthType != "email" {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Login method conflict", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Login method conflict", map[string]any{
 			"method":    "LoginUser",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_LOGIN_METHOD_CONFLICT,
@@ -352,17 +352,17 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 
 	banStatusResp, errorType, err := s.repo.CheckBanStatus(user.ID)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error checking ban status", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error checking ban status", map[string]any{
 			"method":    "LoginUser",
-			"userID":    user.ID,
+			"userId":    user.ID,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while checking your ban status", errorType, err)
 	}
 	if banStatusResp.IsBanned {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Account banned", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Account banned", map[string]any{
 			"method":    "LoginUser",
-			"userID":    user.ID,
+			"userId":    user.ID,
 			"errorType": customerrors.ERR_LOGIN_ACCOUNT_BANNED,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.Unauthenticated, "Your account has been banned", customerrors.ERR_LOGIN_ACCOUNT_BANNED, nil)
@@ -370,26 +370,26 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 
 	valid, errorType, err := s.repo.CheckUserPassword(user.ID, req.Password)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error verifying password", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error verifying password", map[string]any{
 			"method":    "LoginUser",
-			"userID":    user.ID,
+			"userId":    user.ID,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while verifying your password", errorType, err)
 	}
 	if !valid {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Incorrect password", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Incorrect password", map[string]any{
 			"method":    "LoginUser",
-			"userID":    user.ID,
+			"userId":    user.ID,
 			"errorType": customerrors.ERR_LOGIN_CRED_WRONG,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.InvalidArgument, "The password provided is incorrect", customerrors.ERR_LOGIN_CRED_WRONG, nil)
 	}
 
 	if !user.IsVerified {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Email not verified", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Email not verified", map[string]any{
 			"method":    "LoginUser",
-			"userID":    user.ID,
+			"userId":    user.ID,
 			"errorType": customerrors.ERR_LOGIN_NOT_VERIFIED,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.Unauthenticated, "Your email address requires verification", customerrors.ERR_LOGIN_NOT_VERIFIED, nil)
@@ -397,7 +397,7 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 
 	isEnabled, errorType, err := s.repo.GetTwoFactorAuthStatus(req.Email)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error checking 2FA status", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error checking 2FA status", map[string]any{
 			"method":    "LoginUser",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -408,7 +408,7 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 	if isEnabled {
 		valid, errorType, err := s.repo.ValidateTwoFactorAuth(user.ID, req.TwoFactorCode)
 		if err != nil {
-			s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error verifying 2FA OTP", map[string]any{
+			s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error verifying 2FA OTP", map[string]any{
 				"method":    "LoginUser",
 				"email":     req.Email,
 				"errorType": errorType,
@@ -416,7 +416,7 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 			return nil, s.createGrpcError(codes.NotFound, "An error occurred while verifying OTP", errorType, err)
 		}
 		if !valid {
-			s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid 2FA code", map[string]any{
+			s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid 2FA code", map[string]any{
 				"method":    "LoginUser",
 				"email":     req.Email,
 				"errorType": customerrors.ERR_LOGIN_2FA_CODE_INVALID,
@@ -427,9 +427,9 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 
 	rtoken, _, err := utils.GenerateJWT(user.ID, "USER", s.jwtSecret, 7*24*time.Hour)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to generate refresh token", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to generate refresh token", map[string]any{
 			"method":    "LoginUser",
-			"userID":    user.ID,
+			"userId":    user.ID,
 			"errorType": customerrors.ERR_LOGIN_TOKEN_GEN_FAILED,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while generating your refresh token", customerrors.ERR_LOGIN_TOKEN_GEN_FAILED, err)
@@ -437,31 +437,31 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 
 	atoken, expiresIn, err := utils.GenerateJWT(user.ID, "USER", s.jwtSecret, 1*24*time.Hour)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to generate access token", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to generate access token", map[string]any{
 			"method":    "LoginUser",
-			"userID":    user.ID,
+			"userId":    user.ID,
 			"errorType": customerrors.ERR_LOGIN_TOKEN_GEN_FAILED,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while generating your access token", customerrors.ERR_LOGIN_TOKEN_GEN_FAILED, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User login successful", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User login successful", map[string]any{
 		"method": "LoginUser",
-		"userID": user.ID,
+		"userId": user.ID,
 		"email":  req.Email,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.LoginUserResponse{
 		UserProfile: &authUserAdminService.UserProfile{
-			UserID:            user.ID,
+			UserId:            user.ID,
 			FirstName:         user.FirstName,
 			LastName:          user.LastName,
 			Email:             user.Email,
 			Role:              user.Role,
-			PrimaryLanguageID: user.PrimaryLanguageID,
+			PrimaryLanguageId: user.PrimaryLanguageId,
 			Country:           strings.ToUpper(user.Country),
 			TwoFactorEnabled:  user.TwoFactorEnabled,
-			AvatarData:        user.AvatarData,
+			AvatarURL:         user.AvatarURL,
 			UserName:          user.UserName,
 			IsVerified:        user.IsVerified,
 			Socials: &authUserAdminService.Socials{
@@ -474,14 +474,14 @@ func (s *AuthUserAdminService) LoginUser(ctx context.Context, req *authUserAdmin
 		RefreshToken: rtoken,
 		AccessToken:  atoken,
 		ExpiresIn:    expiresIn,
-		UserID:       user.ID,
+		UserId:       user.ID,
 		Message:      "Login successful. Welcome back.",
 	}, nil
 }
 
 // LoginAdmin handles admin login with JWT generation
 func (s *AuthUserAdminService) LoginAdmin(ctx context.Context, req *authUserAdminService.LoginAdminRequest) (*authUserAdminService.LoginAdminResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting LoginAdmin", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting LoginAdmin", map[string]any{
 		"method":    "LoginAdmin",
 		"email":     req.Email,
 		"operation": "admin_login",
@@ -489,7 +489,7 @@ func (s *AuthUserAdminService) LoginAdmin(ctx context.Context, req *authUserAdmi
 
 	user, errorType, err := s.repo.GetUserByEmail(req.Email)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error retrieving admin user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error retrieving admin user", map[string]any{
 			"method":    "LoginAdmin",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -497,7 +497,7 @@ func (s *AuthUserAdminService) LoginAdmin(ctx context.Context, req *authUserAdmi
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while verifying your admin credentials", errorType, err)
 	}
 	if user.ID == "" {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Admin user not found", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Admin user not found", map[string]any{
 			"method":    "LoginAdmin",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_ADMIN_LOGIN_NOT_FOUND,
@@ -505,7 +505,7 @@ func (s *AuthUserAdminService) LoginAdmin(ctx context.Context, req *authUserAdmi
 		return nil, s.createGrpcError(codes.NotFound, "No admin account exists with this email address", customerrors.ERR_ADMIN_LOGIN_NOT_FOUND, nil)
 	}
 	if user.Role != "ADMIN" {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "No admin privileges", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "No admin privileges", map[string]any{
 			"method":    "LoginAdmin",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_ADMIN_LOGIN_NO_PRIVILEGES,
@@ -514,7 +514,7 @@ func (s *AuthUserAdminService) LoginAdmin(ctx context.Context, req *authUserAdmi
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(req.Password+user.Salt)); err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Incorrect admin password", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Incorrect admin password", map[string]any{
 			"method":    "LoginAdmin",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_ADMIN_LOGIN_CRED_WRONG,
@@ -523,7 +523,7 @@ func (s *AuthUserAdminService) LoginAdmin(ctx context.Context, req *authUserAdmi
 	}
 
 	if !user.IsVerified {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Admin not verified", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Admin not verified", map[string]any{
 			"method":    "LoginAdmin",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_ADMIN_LOGIN_NOT_VERIFIED,
@@ -533,7 +533,7 @@ func (s *AuthUserAdminService) LoginAdmin(ctx context.Context, req *authUserAdmi
 
 	atoken, expiresIn, err := utils.GenerateJWT(user.ID, "ADMIN", s.jwtSecret, 1*24*time.Hour)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to generate admin token", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to generate admin token", map[string]any{
 			"method":    "LoginAdmin",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_ADMIN_LOGIN_TOKEN_FAILED,
@@ -541,23 +541,23 @@ func (s *AuthUserAdminService) LoginAdmin(ctx context.Context, req *authUserAdmi
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while generating your admin token", customerrors.ERR_ADMIN_LOGIN_TOKEN_FAILED, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Admin login successful", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Admin login successful", map[string]any{
 		"method":  "LoginAdmin",
-		"adminID": user.ID,
+		"adminId": user.ID,
 		"email":   req.Email,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.LoginAdminResponse{
 		AccessToken: atoken,
 		ExpiresIn:   expiresIn,
-		AdminID:     user.ID,
+		AdminId:     user.ID,
 		Message:     "Admin login successful. Welcome back.",
 	}, nil
 }
 
 // TokenRefresh refreshes an access token
 func (s *AuthUserAdminService) TokenRefresh(ctx context.Context, req *authUserAdminService.TokenRefreshRequest) (*authUserAdminService.TokenRefreshResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting TokenRefresh", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting TokenRefresh", map[string]any{
 		"method":    "TokenRefresh",
 		"operation": "token_refresh",
 	}, "SERVICE", nil)
@@ -567,7 +567,7 @@ func (s *AuthUserAdminService) TokenRefresh(ctx context.Context, req *authUserAd
 		return []byte(s.jwtSecret), nil
 	})
 	if err != nil || !token.Valid {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid refresh token", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid refresh token", map[string]any{
 			"method":    "TokenRefresh",
 			"errorType": customerrors.ERR_TOKEN_REFRESH_INVALID,
 		}, "SERVICE", err)
@@ -576,47 +576,47 @@ func (s *AuthUserAdminService) TokenRefresh(ctx context.Context, req *authUserAd
 
 	newToken, expiresIn, err := utils.GenerateJWT(claims.ID, claims.Role, s.jwtSecret, 1*24*time.Hour)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to generate new access token", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to generate new access token", map[string]any{
 			"method":    "TokenRefresh",
-			"userID":    claims.ID,
+			"userId":    claims.ID,
 			"errorType": customerrors.ERR_TOKEN_REFRESH_FAILED,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while refreshing your session", customerrors.ERR_TOKEN_REFRESH_FAILED, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Token refreshed successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Token refreshed successfully", map[string]any{
 		"method": "TokenRefresh",
-		"userID": claims.ID,
+		"userId": claims.ID,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.TokenRefreshResponse{
 		AccessToken: newToken,
 		ExpiresIn:   expiresIn,
-		UserID:      claims.ID,
+		UserId:      claims.ID,
 	}, nil
 }
 
 // LogoutUser handles user logout (placeholder, as JWT is stateless)
 func (s *AuthUserAdminService) LogoutUser(ctx context.Context, req *authUserAdminService.LogoutRequest) (*authUserAdminService.LogoutResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting LogoutUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting LogoutUser", map[string]any{
 		"method":    "LogoutUser",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "logout",
 	}, "SERVICE", nil)
 
-	errorType, err := s.repo.LogoutUser(req.UserID)
+	errorType, err := s.repo.LogoutUser(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to logout user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to logout user", map[string]any{
 			"method":    "LogoutUser",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while logging out", errorType, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User logged out successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User logged out successfully", map[string]any{
 		"method": "LogoutUser",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.LogoutResponse{
@@ -626,7 +626,7 @@ func (s *AuthUserAdminService) LogoutUser(ctx context.Context, req *authUserAdmi
 
 // ResendEmailVerification resends a verification OTP
 func (s *AuthUserAdminService) ResendEmailVerification(ctx context.Context, req *authUserAdminService.ResendEmailVerificationRequest) (*authUserAdminService.ResendEmailVerificationResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting ResendEmailVerification", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting ResendEmailVerification", map[string]any{
 		"method":    "ResendEmailVerification",
 		"email":     req.Email,
 		"operation": "resend_verification",
@@ -634,7 +634,7 @@ func (s *AuthUserAdminService) ResendEmailVerification(ctx context.Context, req 
 
 	_, expiryAt, errorType, err := s.repo.ResendEmailVerification(req.Email)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to resend verification email", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to resend verification email", map[string]any{
 			"method":    "ResendEmailVerification",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -642,7 +642,7 @@ func (s *AuthUserAdminService) ResendEmailVerification(ctx context.Context, req 
 		return nil, s.createGrpcError(codes.InvalidArgument, "Something went wrong while sending the verification email", errorType, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Verification email resent successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Verification email resent successfully", map[string]any{
 		"method": "ResendEmailVerification",
 		"email":  req.Email,
 	}, "SERVICE", nil)
@@ -655,7 +655,7 @@ func (s *AuthUserAdminService) ResendEmailVerification(ctx context.Context, req 
 
 // VerifyUser verifies a user with an OTP
 func (s *AuthUserAdminService) VerifyUser(ctx context.Context, req *authUserAdminService.VerifyUserRequest) (*authUserAdminService.VerifyUserResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting VerifyUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting VerifyUser", map[string]any{
 		"method":    "VerifyUser",
 		"email":     req.Email,
 		"operation": "verify_user",
@@ -663,7 +663,7 @@ func (s *AuthUserAdminService) VerifyUser(ctx context.Context, req *authUserAdmi
 
 	verified, errorType, err := s.repo.VerifyUserToken(req.Email, req.Token)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error verifying user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error verifying user", map[string]any{
 			"method":    "VerifyUser",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -671,7 +671,7 @@ func (s *AuthUserAdminService) VerifyUser(ctx context.Context, req *authUserAdmi
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while verifying the user", errorType, err)
 	}
 	if !verified {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid verification token", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid verification token", map[string]any{
 			"method":    "VerifyUser",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_VERIFY_TOKEN_INVALID,
@@ -696,7 +696,7 @@ func (s *AuthUserAdminService) VerifyUser(ctx context.Context, req *authUserAdmi
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User verified successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User verified successfully", map[string]any{
 		"method": "VerifyUser",
 		"email":  req.Email,
 	}, "SERVICE", nil)
@@ -708,14 +708,14 @@ func (s *AuthUserAdminService) VerifyUser(ctx context.Context, req *authUserAdmi
 
 // ForgotPassword initiates password recovery
 func (s *AuthUserAdminService) ForgotPassword(ctx context.Context, req *authUserAdminService.ForgotPasswordRequest) (*authUserAdminService.ForgotPasswordResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting ForgotPassword", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting ForgotPassword", map[string]any{
 		"method":    "ForgotPassword",
 		"email":     req.Email,
 		"operation": "forgot_password",
 	}, "SERVICE", nil)
 
 	if !repository.IsValidEmail(req.Email) {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid email", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid email", map[string]any{
 			"method":    "ForgotPassword",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_PW_FORGOT_INVALID_EMAIL,
@@ -726,7 +726,7 @@ func (s *AuthUserAdminService) ForgotPassword(ctx context.Context, req *authUser
 	token := uuid.New().String()
 	_, errorType, err := s.repo.CreateForgotPasswordToken(req.Email, token)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error initiating password recovery", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error initiating password recovery", map[string]any{
 			"method":    "ForgotPassword",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -734,7 +734,7 @@ func (s *AuthUserAdminService) ForgotPassword(ctx context.Context, req *authUser
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while initiating password recovery", errorType, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Password recovery initiated", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Password recovery initiated", map[string]any{
 		"method": "ForgotPassword",
 		"email":  req.Email,
 	}, "SERVICE", nil)
@@ -747,14 +747,14 @@ func (s *AuthUserAdminService) ForgotPassword(ctx context.Context, req *authUser
 
 // FinishForgotPassword completes the password reset process
 func (s *AuthUserAdminService) FinishForgotPassword(ctx context.Context, req *authUserAdminService.FinishForgotPasswordRequest) (*authUserAdminService.FinishForgotPasswordResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting FinishForgotPassword", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting FinishForgotPassword", map[string]any{
 		"method":    "FinishForgotPassword",
 		"email":     req.Email,
 		"operation": "reset_password",
 	}, "SERVICE", nil)
 
 	if req.NewPassword != req.ConfirmPassword {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Password mismatch", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Password mismatch", map[string]any{
 			"method":    "FinishForgotPassword",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_PW_RESET_MISMATCH,
@@ -762,7 +762,7 @@ func (s *AuthUserAdminService) FinishForgotPassword(ctx context.Context, req *au
 		return nil, s.createGrpcError(codes.InvalidArgument, "The new passwords do not match", customerrors.ERR_PW_RESET_MISMATCH, nil)
 	}
 	if !repository.IsValidPassword(req.NewPassword) {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid password format", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid password format", map[string]any{
 			"method":    "FinishForgotPassword",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_PW_RESET_INVALID_PASSWORD,
@@ -772,7 +772,7 @@ func (s *AuthUserAdminService) FinishForgotPassword(ctx context.Context, req *au
 
 	errorType, err := s.repo.FinishForgotPassword(req.Email, req.Token, req.NewPassword)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error resetting password", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error resetting password", map[string]any{
 			"method":    "FinishForgotPassword",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -797,7 +797,7 @@ func (s *AuthUserAdminService) FinishForgotPassword(ctx context.Context, req *au
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Password reset successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Password reset successfully", map[string]any{
 		"method": "FinishForgotPassword",
 		"email":  req.Email,
 	}, "SERVICE", nil)
@@ -809,34 +809,34 @@ func (s *AuthUserAdminService) FinishForgotPassword(ctx context.Context, req *au
 
 // ChangePassword allows authenticated users to change their password
 func (s *AuthUserAdminService) ChangePassword(ctx context.Context, req *authUserAdminService.ChangePasswordRequest) (*authUserAdminService.ChangePasswordResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting ChangePassword", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting ChangePassword", map[string]any{
 		"method":    "ChangePassword",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "change_password",
 	}, "SERVICE", nil)
 
 	if req.NewPassword != req.ConfirmPassword {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Password mismatch", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Password mismatch", map[string]any{
 			"method":    "ChangePassword",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": customerrors.ERR_PW_CHANGE_MISMATCH,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.InvalidArgument, "The new passwords do not match", customerrors.ERR_PW_CHANGE_MISMATCH, nil)
 	}
 	if !repository.IsValidPassword(req.NewPassword) {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid password format", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid password format", map[string]any{
 			"method":    "ChangePassword",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": customerrors.ERR_PW_CHANGE_INVALID_PASSWORD,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.InvalidArgument, "Password must be at least 8 characters and include an uppercase letter and a number", customerrors.ERR_PW_CHANGE_INVALID_PASSWORD, nil)
 	}
 
-	errorType, err := s.repo.ChangeAuthenticatedPassword(req.UserID, req.OldPassword, req.NewPassword)
+	errorType, err := s.repo.ChangeAuthenticatedPassword(req.UserId, req.OldPassword, req.NewPassword)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error changing password", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error changing password", map[string]any{
 			"method":    "ChangePassword",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while changing the password", errorType, err)
@@ -844,10 +844,10 @@ func (s *AuthUserAdminService) ChangePassword(ctx context.Context, req *authUser
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -855,9 +855,9 @@ func (s *AuthUserAdminService) ChangePassword(ctx context.Context, req *authUser
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Password changed successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Password changed successfully", map[string]any{
 		"method": "ChangePassword",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.ChangePasswordResponse{
@@ -867,17 +867,17 @@ func (s *AuthUserAdminService) ChangePassword(ctx context.Context, req *authUser
 
 // UpdateProfile updates user profile
 func (s *AuthUserAdminService) UpdateProfile(ctx context.Context, req *authUserAdminService.UpdateProfileRequest) (*authUserAdminService.UpdateProfileResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting UpdateProfile", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting UpdateProfile", map[string]any{
 		"method":    "UpdateProfile",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "update_profile",
 	}, "SERVICE", nil)
 
-	currentUser, _, err := s.repo.GetUserByUserID(req.UserID)
+	currentUser, _, err := s.repo.GetUserByUserID(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "User not found", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "User not found", map[string]any{
 			"method":    "UpdateProfile",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": customerrors.ERR_USER_NOT_FOUND,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "user not found", customerrors.ERR_USER_NOT_FOUND, err)
@@ -885,9 +885,9 @@ func (s *AuthUserAdminService) UpdateProfile(ctx context.Context, req *authUserA
 
 	username := strings.ToLower(req.UserName)
 	if len(username) < 3 {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Username too short", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Username too short", map[string]any{
 			"method":    "UpdateProfile",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": customerrors.ERR_INVALID_USERNAME,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.InvalidArgument, "username too short", customerrors.ERR_INVALID_USERNAME, nil)
@@ -896,9 +896,9 @@ func (s *AuthUserAdminService) UpdateProfile(ctx context.Context, req *authUserA
 	if username != strings.ToLower(currentUser.UserName) {
 		available := s.repo.UserAvailable(username)
 		if !available {
-			s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Username taken", map[string]any{
+			s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Username taken", map[string]any{
 				"method":    "UpdateProfile",
-				"userID":    req.UserID,
+				"userId":    req.UserId,
 				"username":  username,
 				"errorType": customerrors.ERR_USERNAME_TAKEN,
 			}, "SERVICE", nil)
@@ -909,9 +909,9 @@ func (s *AuthUserAdminService) UpdateProfile(ctx context.Context, req *authUserA
 	req.UserName = username
 	errorType, err := s.repo.UpdateProfile(req)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to update profile", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to update profile", map[string]any{
 			"method":    "UpdateProfile",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.Internal, "update failed", errorType, err)
@@ -919,12 +919,12 @@ func (s *AuthUserAdminService) UpdateProfile(ctx context.Context, req *authUserA
 
 	// Invalidate non-admin caches, including old username
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
 		fmt.Sprintf("user_profile:username:%s", strings.ToLower(currentUser.UserName)),
 		fmt.Sprintf("user_profile:username:%s", username),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -932,18 +932,18 @@ func (s *AuthUserAdminService) UpdateProfile(ctx context.Context, req *authUserA
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Profile updated successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Profile updated successfully", map[string]any{
 		"method":   "UpdateProfile",
-		"userID":   req.UserID,
+		"userId":   req.UserId,
 		"username": username,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.UpdateProfileResponse{
 		UserProfile: &authUserAdminService.UserProfile{
-			UserID:            req.UserID,
+			UserId:            req.UserId,
 			FirstName:         req.FirstName,
 			LastName:          req.LastName,
-			PrimaryLanguageID: req.PrimaryLanguageID,
+			PrimaryLanguageId: req.PrimaryLanguageId,
 			Country:           strings.ToUpper(req.Country),
 			UserName:          username,
 			Bio:               req.Bio,
@@ -959,17 +959,17 @@ func (s *AuthUserAdminService) UpdateProfile(ctx context.Context, req *authUserA
 
 // UpdateProfileImage updates the user's profile image
 func (s *AuthUserAdminService) UpdateProfileImage(ctx context.Context, req *authUserAdminService.UpdateProfileImageRequest) (*authUserAdminService.UpdateProfileImageResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting UpdateProfileImage", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting UpdateProfileImage", map[string]any{
 		"method":    "UpdateProfileImage",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "update_profile_image",
 	}, "SERVICE", nil)
 
 	errorType, err := s.repo.UpdateProfileImage(req)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to update profile image", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to update profile image", map[string]any{
 			"method":    "UpdateProfileImage",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while updating your profile image", errorType, err)
@@ -977,10 +977,10 @@ func (s *AuthUserAdminService) UpdateProfileImage(ctx context.Context, req *auth
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -988,44 +988,44 @@ func (s *AuthUserAdminService) UpdateProfileImage(ctx context.Context, req *auth
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Profile image updated successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Profile image updated successfully", map[string]any{
 		"method": "UpdateProfileImage",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.UpdateProfileImageResponse{
 		Message:   "Your profile image has been updated successfully.",
-		AvatarURL: req.AvatarURL,
+		AvatarUrl: req.AvatarUrl,
 	}, nil
 }
 
-// GetUserProfile retrieves a user's profile by ID or Username
+// GetUserProfile retrieves a user's profile by Id or Username
 func (s *AuthUserAdminService) GetUserProfile(ctx context.Context, req *authUserAdminService.GetUserProfileRequest) (*authUserAdminService.GetUserProfileResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting GetUserProfile", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting GetUserProfile", map[string]any{
 		"method":    "GetUserProfile",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"username":  req.UserName,
 		"operation": "get_profile",
 	}, "SERVICE", nil)
 
 	var cacheKey string
-	if req.UserID != "" {
-		cacheKey = fmt.Sprintf("user_profile:id:%s", req.UserID)
+	if req.UserId != "" {
+		cacheKey = fmt.Sprintf("user_profile:id:%s", req.UserId)
 	} else if req.UserName != nil && *req.UserName != "" {
 		cacheKey = fmt.Sprintf("user_profile:username:%s", *req.UserName)
 	} else {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid userID or username", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid userId or username", map[string]any{
 			"method":    "GetUserProfile",
 			"errorType": "INVALID_ARGUMENT",
 		}, "SERVICE", nil)
-		return nil, s.createGrpcError(codes.InvalidArgument, "UserID or Username must be provided", "INVALID_ARGUMENT", nil)
+		return nil, s.createGrpcError(codes.InvalidArgument, "UserId or Username must be provided", "INVALID_ARGUMENT", nil)
 	}
 
 	cachedProfile, err := s.cache.Get(cacheKey)
 	if err == nil && cachedProfile != "" {
 		var profile authUserAdminService.GetUserProfileResponse
 		if err := json.Unmarshal([]byte(cachedProfile), &profile); err == nil {
-			s.logger.Log(zapcore.InfoLevel, req.TraceID, "Profile retrieved from cache", map[string]any{
+			s.logger.Log(zapcore.InfoLevel, req.TraceId, "Profile retrieved from cache", map[string]any{
 				"method":   "GetUserProfile",
 				"cacheKey": cacheKey,
 			}, "SERVICE", nil)
@@ -1037,15 +1037,15 @@ func (s *AuthUserAdminService) GetUserProfile(ctx context.Context, req *authUser
 		resp      *authUserAdminService.GetUserProfileResponse
 		errorType string
 	)
-	if req.UserID != "" {
-		resp, errorType, err = s.repo.GetUserProfileByUserID(req.UserID)
+	if req.UserId != "" {
+		resp, errorType, err = s.repo.GetUserProfileByUserID(req.UserId)
 	} else {
 		resp, errorType, err = s.repo.GetUserProfileByUsername(*req.UserName)
 	}
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to retrieve user profile", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to retrieve user profile", map[string]any{
 			"method":    "GetUserProfile",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"username":  req.UserName,
 			"errorType": errorType,
 		}, "SERVICE", err)
@@ -1057,9 +1057,9 @@ func (s *AuthUserAdminService) GetUserProfile(ctx context.Context, req *authUser
 		// Skip logging cache set failure
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User profile retrieved successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User profile retrieved successfully", map[string]any{
 		"method":   "GetUserProfile",
-		"userID":   req.UserID,
+		"userId":   req.UserId,
 		"username": req.UserName,
 	}, "SERVICE", nil)
 
@@ -1068,33 +1068,33 @@ func (s *AuthUserAdminService) GetUserProfile(ctx context.Context, req *authUser
 
 // CheckBanStatus checks if a user is banned
 func (s *AuthUserAdminService) CheckBanStatus(ctx context.Context, req *authUserAdminService.CheckBanStatusRequest) (*authUserAdminService.CheckBanStatusResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting CheckBanStatus", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting CheckBanStatus", map[string]any{
 		"method":    "CheckBanStatus",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "check_ban",
 	}, "SERVICE", nil)
 
-	resp, errorType, err := s.repo.CheckBanStatus(req.UserID)
+	resp, errorType, err := s.repo.CheckBanStatus(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error checking ban status", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error checking ban status", map[string]any{
 			"method":    "CheckBanStatus",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while checking ban status", errorType, err)
 	}
 	if resp == nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "User not found", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "User not found", map[string]any{
 			"method":    "CheckBanStatus",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": customerrors.ERR_BAN_STATUS_NOT_FOUND,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.NotFound, "The specified user could not be found", customerrors.ERR_BAN_STATUS_NOT_FOUND, nil)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Ban status checked", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Ban status checked", map[string]any{
 		"method":   "CheckBanStatus",
-		"userID":   req.UserID,
+		"userId":   req.UserId,
 		"isBanned": resp.IsBanned,
 	}, "SERVICE", nil)
 
@@ -1103,19 +1103,19 @@ func (s *AuthUserAdminService) CheckBanStatus(ctx context.Context, req *authUser
 
 // FollowUser adds a follow relationship
 func (s *AuthUserAdminService) FollowUser(ctx context.Context, req *authUserAdminService.FollowUserRequest) (*authUserAdminService.FollowUserResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting FollowUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting FollowUser", map[string]any{
 		"method":     "FollowUser",
-		"followerID": req.FollowerID,
-		"followeeID": req.FolloweeID,
+		"followerId": req.FollowerId,
+		"followeeId": req.FolloweeId,
 		"operation":  "follow_user",
 	}, "SERVICE", nil)
 
-	errorType, err := s.repo.FollowUser(req.FollowerID, req.FolloweeID)
+	errorType, err := s.repo.FollowUser(req.FollowerId, req.FolloweeId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to follow user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to follow user", map[string]any{
 			"method":     "FollowUser",
-			"followerID": req.FollowerID,
-			"followeeID": req.FolloweeID,
+			"followerId": req.FollowerId,
+			"followeeId": req.FolloweeId,
 			"errorType":  errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while following the user", errorType, err)
@@ -1123,10 +1123,10 @@ func (s *AuthUserAdminService) FollowUser(ctx context.Context, req *authUserAdmi
 
 	// Invalidate non-admin follow-related caches
 	cacheKeys := []string{
-		fmt.Sprintf("following:%s", req.FollowerID),
-		fmt.Sprintf("followers:%s", req.FolloweeID),
-		fmt.Sprintf("follow_check:%s:%s", req.FollowerID, req.FolloweeID),
-		fmt.Sprintf("follow_check:%s:%s", req.FolloweeID, req.FollowerID),
+		fmt.Sprintf("following:%s", req.FollowerId),
+		fmt.Sprintf("followers:%s", req.FolloweeId),
+		fmt.Sprintf("follow_check:%s:%s", req.FollowerId, req.FolloweeId),
+		fmt.Sprintf("follow_check:%s:%s", req.FolloweeId, req.FollowerId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1134,10 +1134,10 @@ func (s *AuthUserAdminService) FollowUser(ctx context.Context, req *authUserAdmi
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User followed successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User followed successfully", map[string]any{
 		"method":     "FollowUser",
-		"followerID": req.FollowerID,
-		"followeeID": req.FolloweeID,
+		"followerId": req.FollowerId,
+		"followeeId": req.FolloweeId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.FollowUserResponse{
@@ -1147,30 +1147,30 @@ func (s *AuthUserAdminService) FollowUser(ctx context.Context, req *authUserAdmi
 
 // UnfollowUser removes a follow relationship
 func (s *AuthUserAdminService) UnfollowUser(ctx context.Context, req *authUserAdminService.UnfollowUserRequest) (*authUserAdminService.UnfollowUserResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting UnfollowUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting UnfollowUser", map[string]any{
 		"method":     "UnfollowUser",
-		"followerID": req.FollowerID,
-		"followeeID": req.FolloweeID,
+		"followerId": req.FollowerId,
+		"followeeId": req.FolloweeId,
 		"operation":  "unfollow_user",
 	}, "SERVICE", nil)
 
-	errorType, err := s.repo.UnfollowUser(req.FollowerID, req.FolloweeID)
+	errorType, err := s.repo.UnfollowUser(req.FollowerId, req.FolloweeId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to unfollow user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to unfollow user", map[string]any{
 			"method":     "UnfollowUser",
-			"followerID": req.FollowerID,
-			"followeeID": req.FolloweeID,
+			"followerId": req.FollowerId,
+			"followeeId": req.FolloweeId,
 			"errorType":  errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while unfollowing the user", errorType, err)
 	}
 
-	// Invalidate non-admin follow-related caches
+	// InvalIdate non-admin follow-related caches
 	cacheKeys := []string{
-		fmt.Sprintf("following:%s", req.FollowerID),
-		fmt.Sprintf("followers:%s", req.FolloweeID),
-		fmt.Sprintf("follow_check:%s:%s", req.FollowerID, req.FolloweeID),
-		fmt.Sprintf("follow_check:%s:%s", req.FolloweeID, req.FollowerID),
+		fmt.Sprintf("following:%s", req.FollowerId),
+		fmt.Sprintf("followers:%s", req.FolloweeId),
+		fmt.Sprintf("follow_check:%s:%s", req.FollowerId, req.FolloweeId),
+		fmt.Sprintf("follow_check:%s:%s", req.FolloweeId, req.FollowerId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1178,10 +1178,10 @@ func (s *AuthUserAdminService) UnfollowUser(ctx context.Context, req *authUserAd
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User unfollowed successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User unfollowed successfully", map[string]any{
 		"method":     "UnfollowUser",
-		"followerID": req.FollowerID,
-		"followeeID": req.FolloweeID,
+		"followerId": req.FollowerId,
+		"followeeId": req.FolloweeId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.UnfollowUserResponse{
@@ -1191,31 +1191,31 @@ func (s *AuthUserAdminService) UnfollowUser(ctx context.Context, req *authUserAd
 
 // GetFollowing retrieves users a given user is following
 func (s *AuthUserAdminService) GetFollowing(ctx context.Context, req *authUserAdminService.GetFollowingRequest) (*authUserAdminService.GetFollowingResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting GetFollowing", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting GetFollowing", map[string]any{
 		"method":    "GetFollowing",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "get_following",
 	}, "SERVICE", nil)
 
-	cacheKey := fmt.Sprintf("following:%s", req.UserID)
+	cacheKey := fmt.Sprintf("following:%s", req.UserId)
 	cachedFollowing, err := s.cache.Get(cacheKey)
 	if err == nil && cachedFollowing != "" {
 		var following authUserAdminService.GetFollowingResponse
 		if err := json.Unmarshal([]byte(cachedFollowing), &following); err == nil {
-			s.logger.Log(zapcore.InfoLevel, req.TraceID, "Following list retrieved from cache", map[string]any{
+			s.logger.Log(zapcore.InfoLevel, req.TraceId, "Following list retrieved from cache", map[string]any{
 				"method":   "GetFollowing",
-				"userID":   req.UserID,
+				"userId":   req.UserId,
 				"cacheKey": cacheKey,
 			}, "SERVICE", nil)
 			return &following, nil
 		}
 	}
 
-	profiles, errorType, err := s.repo.GetFollowing(req.UserID)
+	profiles, errorType, err := s.repo.GetFollowing(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to retrieve following list", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to retrieve following list", map[string]any{
 			"method":    "GetFollowing",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while retrieving followed users", errorType, err)
@@ -1229,9 +1229,9 @@ func (s *AuthUserAdminService) GetFollowing(ctx context.Context, req *authUserAd
 		// Skip logging cache set failure
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Following list retrieved successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Following list retrieved successfully", map[string]any{
 		"method": "GetFollowing",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return resp, nil
@@ -1239,31 +1239,31 @@ func (s *AuthUserAdminService) GetFollowing(ctx context.Context, req *authUserAd
 
 // GetFollowers retrieves users following a given user
 func (s *AuthUserAdminService) GetFollowers(ctx context.Context, req *authUserAdminService.GetFollowersRequest) (*authUserAdminService.GetFollowersResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting GetFollowers", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting GetFollowers", map[string]any{
 		"method":    "GetFollowers",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "get_followers",
 	}, "SERVICE", nil)
 
-	cacheKey := fmt.Sprintf("followers:%s", req.UserID)
+	cacheKey := fmt.Sprintf("followers:%s", req.UserId)
 	cachedFollowers, err := s.cache.Get(cacheKey)
 	if err == nil && cachedFollowers != "" {
 		var followers authUserAdminService.GetFollowersResponse
 		if err := json.Unmarshal([]byte(cachedFollowers), &followers); err == nil {
-			s.logger.Log(zapcore.InfoLevel, req.TraceID, "Followers list retrieved from cache", map[string]any{
+			s.logger.Log(zapcore.InfoLevel, req.TraceId, "Followers list retrieved from cache", map[string]any{
 				"method":   "GetFollowers",
-				"userID":   req.UserID,
+				"userId":   req.UserId,
 				"cacheKey": cacheKey,
 			}, "SERVICE", nil)
 			return &followers, nil
 		}
 	}
 
-	profiles, errorType, err := s.repo.GetFollowers(req.UserID)
+	profiles, errorType, err := s.repo.GetFollowers(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to retrieve followers list", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to retrieve followers list", map[string]any{
 			"method":    "GetFollowers",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while retrieving followers", errorType, err)
@@ -1277,9 +1277,9 @@ func (s *AuthUserAdminService) GetFollowers(ctx context.Context, req *authUserAd
 		// Skip logging cache set failure
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Followers list retrieved successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Followers list retrieved successfully", map[string]any{
 		"method": "GetFollowers",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return resp, nil
@@ -1287,47 +1287,47 @@ func (s *AuthUserAdminService) GetFollowers(ctx context.Context, req *authUserAd
 
 // GetFollowFollowingCheck checks if the owner user follows or is followed by the target user
 func (s *AuthUserAdminService) GetFollowFollowingCheck(ctx context.Context, req *authUserAdminService.GetFollowFollowingCheckRequest) (*authUserAdminService.GetFollowFollowingCheckResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting GetFollowFollowingCheck", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting GetFollowFollowingCheck", map[string]any{
 		"method":       "GetFollowFollowingCheck",
-		"ownerUserID":  req.OwnerUserID,
-		"targetUserID": req.TargetUserID,
+		"ownerUserId":  req.OwnerUserId,
+		"targetUserId": req.TargetUserId,
 		"operation":    "check_follow",
 	}, "SERVICE", nil)
 
-	ownerUserID := req.OwnerUserID
-	targetUserID := req.TargetUserID
+	ownerUserId := req.OwnerUserId
+	targetUserId := req.TargetUserId
 
-	if ownerUserID == "" || targetUserID == "" {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Empty user IDs", map[string]any{
+	if ownerUserId == "" || targetUserId == "" {
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Empty user Ids", map[string]any{
 			"method":    "GetFollowFollowingCheck",
 			"errorType": customerrors.ERR_PARAM_EMPTY,
 		}, "SERVICE", nil)
-		return nil, s.createGrpcError(codes.InvalidArgument, "Owner user ID and target user ID cannot be empty", customerrors.ERR_PARAM_EMPTY, nil)
+		return nil, s.createGrpcError(codes.InvalidArgument, "Owner user Id and target user Id cannot be empty", customerrors.ERR_PARAM_EMPTY, nil)
 	}
 
-	if ownerUserID == targetUserID {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Self follow check", map[string]any{
+	if ownerUserId == targetUserId {
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Self follow check", map[string]any{
 			"method":    "GetFollowFollowingCheck",
 			"errorType": customerrors.ERR_INVALID_REQUEST,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.InvalidArgument, "Cannot check follow status for self", customerrors.ERR_INVALID_REQUEST, nil)
 	}
 
-	isFollowing, isFollower, errorType, err := s.repo.CheckFollowRelationship(ownerUserID, targetUserID)
+	isFollowing, isFollower, errorType, err := s.repo.CheckFollowRelationship(ownerUserId, targetUserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error checking follow status", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error checking follow status", map[string]any{
 			"method":       "GetFollowFollowingCheck",
-			"ownerUserID":  ownerUserID,
-			"targetUserID": targetUserID,
+			"ownerUserId":  ownerUserId,
+			"targetUserId": targetUserId,
 			"errorType":    errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while checking follow status", errorType, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Follow status checked", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Follow status checked", map[string]any{
 		"method":       "GetFollowFollowingCheck",
-		"ownerUserID":  ownerUserID,
-		"targetUserID": targetUserID,
+		"ownerUserId":  ownerUserId,
+		"targetUserId": targetUserId,
 		"isFollowing":  isFollowing,
 		"isFollower":   isFollower,
 	}, "SERVICE", nil)
@@ -1340,14 +1340,14 @@ func (s *AuthUserAdminService) GetFollowFollowingCheck(ctx context.Context, req 
 
 // CreateUserAdmin creates a new admin user
 func (s *AuthUserAdminService) CreateUserAdmin(ctx context.Context, req *authUserAdminService.CreateUserAdminRequest) (*authUserAdminService.CreateUserAdminResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting CreateUserAdmin", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting CreateUserAdmin", map[string]any{
 		"method":    "CreateUserAdmin",
 		"email":     req.Email,
 		"operation": "create_admin",
 	}, "SERVICE", nil)
 
 	if req.Password != req.ConfirmPassword {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Password mismatch", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Password mismatch", map[string]any{
 			"method":    "CreateUserAdmin",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_ADMIN_CREATE_PASSWORD_MISMATCH,
@@ -1355,7 +1355,7 @@ func (s *AuthUserAdminService) CreateUserAdmin(ctx context.Context, req *authUse
 		return nil, s.createGrpcError(codes.InvalidArgument, "The passwords entered do not match", customerrors.ERR_ADMIN_CREATE_PASSWORD_MISMATCH, nil)
 	}
 	if !repository.IsValidEmail(req.Email) {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid email", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid email", map[string]any{
 			"method":    "CreateUserAdmin",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_ADMIN_CREATE_INVALID_EMAIL,
@@ -1363,7 +1363,7 @@ func (s *AuthUserAdminService) CreateUserAdmin(ctx context.Context, req *authUse
 		return nil, s.createGrpcError(codes.InvalidArgument, "Please provide a valid email address", customerrors.ERR_ADMIN_CREATE_INVALID_EMAIL, nil)
 	}
 	if !repository.IsValidPassword(req.Password) {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid password format", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid password format", map[string]any{
 			"method":    "CreateUserAdmin",
 			"email":     req.Email,
 			"errorType": customerrors.ERR_ADMIN_CREATE_INVALID_PASSWORD,
@@ -1371,9 +1371,9 @@ func (s *AuthUserAdminService) CreateUserAdmin(ctx context.Context, req *authUse
 		return nil, s.createGrpcError(codes.InvalidArgument, "Password must be at least 8 characters and include an uppercase letter and a number", customerrors.ERR_ADMIN_CREATE_INVALID_PASSWORD, nil)
 	}
 
-	userID, errorType, err := s.repo.CreateUserAdmin(req)
+	userId, errorType, err := s.repo.CreateUserAdmin(req)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to create admin user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to create admin user", map[string]any{
 			"method":    "CreateUserAdmin",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -1383,10 +1383,10 @@ func (s *AuthUserAdminService) CreateUserAdmin(ctx context.Context, req *authUse
 
 	// Invalidate non-admin caches for new admin user
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", userID),
-		fmt.Sprintf("ban_status:%s", userID),
-		fmt.Sprintf("following:%s", userID),
-		fmt.Sprintf("followers:%s", userID),
+		fmt.Sprintf("user_profile:id:%s", userId),
+		fmt.Sprintf("ban_status:%s", userId),
+		fmt.Sprintf("following:%s", userId),
+		fmt.Sprintf("followers:%s", userId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1394,39 +1394,39 @@ func (s *AuthUserAdminService) CreateUserAdmin(ctx context.Context, req *authUse
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Admin user created successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Admin user created successfully", map[string]any{
 		"method": "CreateUserAdmin",
-		"userID": userID,
+		"userId": userId,
 		"email":  req.Email,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.CreateUserAdminResponse{
-		UserID:  userID,
+		UserId:  userId,
 		Message: "The admin account has been created successfully.",
 	}, nil
 }
 
 // UpdateUserAdmin updates an admin user
 func (s *AuthUserAdminService) UpdateUserAdmin(ctx context.Context, req *authUserAdminService.UpdateUserAdminRequest) (*authUserAdminService.UpdateUserAdminResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting UpdateUserAdmin", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting UpdateUserAdmin", map[string]any{
 		"method":    "UpdateUserAdmin",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "update_admin",
 	}, "SERVICE", nil)
 
-	isAdmin, errorType, err := s.repo.IsAdmin(req.UserID)
+	isAdmin, errorType, err := s.repo.IsAdmin(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error verifying admin status", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error verifying admin status", map[string]any{
 			"method":    "UpdateUserAdmin",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while verifying admin status", errorType, err)
 	}
 	if !isAdmin {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "No admin privileges", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "No admin privileges", map[string]any{
 			"method":    "UpdateUserAdmin",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": customerrors.ERR_ADMIN_UPDATE_NO_PRIVILEGES,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.PermissionDenied, "Administrative privileges are required to perform this action", customerrors.ERR_ADMIN_UPDATE_NO_PRIVILEGES, nil)
@@ -1434,9 +1434,9 @@ func (s *AuthUserAdminService) UpdateUserAdmin(ctx context.Context, req *authUse
 
 	if req.Password != "" {
 		if !repository.IsValidPassword(req.Password) {
-			s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid password format", map[string]any{
+			s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid password format", map[string]any{
 				"method":    "UpdateUserAdmin",
-				"userID":    req.UserID,
+				"userId":    req.UserId,
 				"errorType": customerrors.ERR_ADMIN_UPDATE_INVALID_PASSWORD,
 			}, "SERVICE", nil)
 			return nil, s.createGrpcError(codes.InvalidArgument, "Password must be at least 8 characters and include an uppercase letter and a number", customerrors.ERR_ADMIN_UPDATE_INVALID_PASSWORD, nil)
@@ -1445,9 +1445,9 @@ func (s *AuthUserAdminService) UpdateUserAdmin(ctx context.Context, req *authUse
 
 	errorType, err = s.repo.UpdateUserAdmin(req)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to update admin user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to update admin user", map[string]any{
 			"method":    "UpdateUserAdmin",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while updating the admin account", errorType, err)
@@ -1455,10 +1455,10 @@ func (s *AuthUserAdminService) UpdateUserAdmin(ctx context.Context, req *authUse
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1466,9 +1466,9 @@ func (s *AuthUserAdminService) UpdateUserAdmin(ctx context.Context, req *authUse
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Admin user updated successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Admin user updated successfully", map[string]any{
 		"method": "UpdateUserAdmin",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.UpdateUserAdminResponse{
@@ -1478,17 +1478,17 @@ func (s *AuthUserAdminService) UpdateUserAdmin(ctx context.Context, req *authUse
 
 // BanUser sets a user as banned
 func (s *AuthUserAdminService) BanUser(ctx context.Context, req *authUserAdminService.BanUserRequest) (*authUserAdminService.BanUserResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting BanUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting BanUser", map[string]any{
 		"method":    "BanUser",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "ban_user",
 	}, "SERVICE", nil)
 
-	errorType, err := s.repo.BanUser(req.UserID, req.BanReason, req.BanExpiry, req.BanType)
+	errorType, err := s.repo.BanUser(req.UserId, req.BanReason, req.BanExpiry, req.BanType)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to ban user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to ban user", map[string]any{
 			"method":    "BanUser",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while banning the user", errorType, err)
@@ -1496,10 +1496,10 @@ func (s *AuthUserAdminService) BanUser(ctx context.Context, req *authUserAdminSe
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1507,9 +1507,9 @@ func (s *AuthUserAdminService) BanUser(ctx context.Context, req *authUserAdminSe
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User banned successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User banned successfully", map[string]any{
 		"method":    "BanUser",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"banReason": req.BanReason,
 	}, "SERVICE", nil)
 
@@ -1520,17 +1520,17 @@ func (s *AuthUserAdminService) BanUser(ctx context.Context, req *authUserAdminSe
 
 // UnbanUser removes a user's ban
 func (s *AuthUserAdminService) UnbanUser(ctx context.Context, req *authUserAdminService.UnbanUserRequest) (*authUserAdminService.UnbanUserResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting UnbanUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting UnbanUser", map[string]any{
 		"method":    "UnbanUser",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "unban_user",
 	}, "SERVICE", nil)
 
-	errorType, err := s.repo.UnbanUser(req.UserID)
+	errorType, err := s.repo.UnbanUser(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to unban user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to unban user", map[string]any{
 			"method":    "UnbanUser",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while unbanning the user", errorType, err)
@@ -1538,10 +1538,10 @@ func (s *AuthUserAdminService) UnbanUser(ctx context.Context, req *authUserAdmin
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1549,9 +1549,9 @@ func (s *AuthUserAdminService) UnbanUser(ctx context.Context, req *authUserAdmin
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User unbanned successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User unbanned successfully", map[string]any{
 		"method": "UnbanUser",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.UnbanUserResponse{
@@ -1561,17 +1561,17 @@ func (s *AuthUserAdminService) UnbanUser(ctx context.Context, req *authUserAdmin
 
 // VerifyAdminUser verifies a user (admin action)
 func (s *AuthUserAdminService) VerifyAdminUser(ctx context.Context, req *authUserAdminService.VerifyAdminUserRequest) (*authUserAdminService.VerifyAdminUserResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting VerifyAdminUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting VerifyAdminUser", map[string]any{
 		"method":    "VerifyAdminUser",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "verify_admin_user",
 	}, "SERVICE", nil)
 
-	errorType, err := s.repo.VerifyAdminUser(req.UserID)
+	errorType, err := s.repo.VerifyAdminUser(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to verify user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to verify user", map[string]any{
 			"method":    "VerifyAdminUser",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while verifying the user", errorType, err)
@@ -1579,10 +1579,10 @@ func (s *AuthUserAdminService) VerifyAdminUser(ctx context.Context, req *authUse
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1590,9 +1590,9 @@ func (s *AuthUserAdminService) VerifyAdminUser(ctx context.Context, req *authUse
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User verified successfully by admin", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User verified successfully by admin", map[string]any{
 		"method": "VerifyAdminUser",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.VerifyAdminUserResponse{
@@ -1602,17 +1602,17 @@ func (s *AuthUserAdminService) VerifyAdminUser(ctx context.Context, req *authUse
 
 // UnverifyUser un-verifies a user (admin action)
 func (s *AuthUserAdminService) UnverifyUser(ctx context.Context, req *authUserAdminService.UnverifyUserAdminRequest) (*authUserAdminService.UnverifyUserAdminResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting UnverifyUser", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting UnverifyUser", map[string]any{
 		"method":    "UnverifyUser",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "unverify_user",
 	}, "SERVICE", nil)
 
-	errorType, err := s.repo.UnverifyUser(req.UserID)
+	errorType, err := s.repo.UnverifyUser(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to unverify user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to unverify user", map[string]any{
 			"method":    "UnverifyUser",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while unverifying the user", errorType, err)
@@ -1620,10 +1620,10 @@ func (s *AuthUserAdminService) UnverifyUser(ctx context.Context, req *authUserAd
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1631,9 +1631,9 @@ func (s *AuthUserAdminService) UnverifyUser(ctx context.Context, req *authUserAd
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User unverified successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User unverified successfully", map[string]any{
 		"method": "UnverifyUser",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.UnverifyUserAdminResponse{
@@ -1643,35 +1643,35 @@ func (s *AuthUserAdminService) UnverifyUser(ctx context.Context, req *authUserAd
 
 // SoftDeleteUserAdmin soft deletes a user
 func (s *AuthUserAdminService) SoftDeleteUserAdmin(ctx context.Context, req *authUserAdminService.SoftDeleteUserAdminRequest) (*authUserAdminService.SoftDeleteUserAdminResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting SoftDeleteUserAdmin", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting SoftDeleteUserAdmin", map[string]any{
 		"method":    "SoftDeleteUserAdmin",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "soft_delete_user",
 	}, "SERVICE", nil)
 
-	isAdmin, errorType, err := s.repo.IsAdmin(req.UserID)
+	isAdmin, errorType, err := s.repo.IsAdmin(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error verifying admin status", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error verifying admin status", map[string]any{
 			"method":    "SoftDeleteUserAdmin",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while verifying admin status", errorType, err)
 	}
 	if !isAdmin {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "No admin privileges", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "No admin privileges", map[string]any{
 			"method":    "SoftDeleteUserAdmin",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": customerrors.ERR_ADMIN_DELETE_NO_PRIVILEGES,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.PermissionDenied, "Administrative privileges are required to delete a user", customerrors.ERR_ADMIN_DELETE_NO_PRIVILEGES, nil)
 	}
 
-	errorType, err = s.repo.SoftDeleteUserAdmin(req.UserID)
+	errorType, err = s.repo.SoftDeleteUserAdmin(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to soft delete user", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to soft delete user", map[string]any{
 			"method":    "SoftDeleteUserAdmin",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while deleting the user", errorType, err)
@@ -1679,10 +1679,10 @@ func (s *AuthUserAdminService) SoftDeleteUserAdmin(ctx context.Context, req *aut
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1690,9 +1690,9 @@ func (s *AuthUserAdminService) SoftDeleteUserAdmin(ctx context.Context, req *aut
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User soft deleted successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User soft deleted successfully", map[string]any{
 		"method": "SoftDeleteUserAdmin",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.SoftDeleteUserAdminResponse{
@@ -1702,21 +1702,21 @@ func (s *AuthUserAdminService) SoftDeleteUserAdmin(ctx context.Context, req *aut
 
 // GetAllUsers retrieves a paginated list of users
 func (s *AuthUserAdminService) GetAllUsers(ctx context.Context, req *authUserAdminService.GetAllUsersRequest) (*authUserAdminService.GetAllUsersResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting GetAllUsers", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting GetAllUsers", map[string]any{
 		"method":    "GetAllUsers",
 		"operation": "get_all_users",
 	}, "SERVICE", nil)
 
 	profiles, totalCount, errorType, nextPageToken, prevPageToken, err := s.repo.GetAllUsers(req)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to retrieve user list", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to retrieve user list", map[string]any{
 			"method":    "GetAllUsers",
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while retrieving users", errorType, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User list retrieved successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User list retrieved successfully", map[string]any{
 		"method":     "GetAllUsers",
 		"totalCount": totalCount,
 	}, "SERVICE", nil)
@@ -1732,25 +1732,25 @@ func (s *AuthUserAdminService) GetAllUsers(ctx context.Context, req *authUserAdm
 
 // BanHistory retrieves ban history for a user
 func (s *AuthUserAdminService) BanHistory(ctx context.Context, req *authUserAdminService.BanHistoryRequest) (*authUserAdminService.BanHistoryResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting BanHistory", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting BanHistory", map[string]any{
 		"method":    "BanHistory",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "get_ban_history",
 	}, "SERVICE", nil)
 
-	history, errorType, err := s.repo.GetBanHistory(req.UserID)
+	history, errorType, err := s.repo.GetBanHistory(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to retrieve ban history", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to retrieve ban history", map[string]any{
 			"method":    "BanHistory",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while retrieving ban history", errorType, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Ban history retrieved successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Ban history retrieved successfully", map[string]any{
 		"method": "BanHistory",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.BanHistoryResponse{
@@ -1761,7 +1761,7 @@ func (s *AuthUserAdminService) BanHistory(ctx context.Context, req *authUserAdmi
 
 // SearchUsers searches for users with pagination
 func (s *AuthUserAdminService) SearchUsers(ctx context.Context, req *authUserAdminService.SearchUsersRequest) (*authUserAdminService.SearchUsersResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting SearchUsers", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting SearchUsers", map[string]any{
 		"method":    "SearchUsers",
 		"query":     req.Query,
 		"operation": "search_users",
@@ -1772,7 +1772,7 @@ func (s *AuthUserAdminService) SearchUsers(ctx context.Context, req *authUserAdm
 	if err == nil && cachedUsers != "" {
 		var usersResp authUserAdminService.SearchUsersResponse
 		if err := json.Unmarshal([]byte(cachedUsers), &usersResp); err == nil {
-			s.logger.Log(zapcore.InfoLevel, req.TraceID, "Users retrieved from cache", map[string]any{
+			s.logger.Log(zapcore.InfoLevel, req.TraceId, "Users retrieved from cache", map[string]any{
 				"method":   "SearchUsers",
 				"query":    req.Query,
 				"cacheKey": cacheKey,
@@ -1783,7 +1783,7 @@ func (s *AuthUserAdminService) SearchUsers(ctx context.Context, req *authUserAdm
 
 	users, nextPageToken, errorType, err := s.repo.SearchUsers(req.Query, req.PageToken, req.Limit)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to search users", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to search users", map[string]any{
 			"method":    "SearchUsers",
 			"query":     req.Query,
 			"errorType": errorType,
@@ -1802,7 +1802,7 @@ func (s *AuthUserAdminService) SearchUsers(ctx context.Context, req *authUserAdm
 		// Skip logging cache set failure
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "User search completed successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "User search completed successfully", map[string]any{
 		"method": "SearchUsers",
 		"query":  req.Query,
 	}, "SERVICE", nil)
@@ -1812,17 +1812,17 @@ func (s *AuthUserAdminService) SearchUsers(ctx context.Context, req *authUserAdm
 
 // SetUpTwoFactorAuth enables 2FA for a user
 func (s *AuthUserAdminService) SetUpTwoFactorAuth(ctx context.Context, req *authUserAdminService.SetUpTwoFactorAuthRequest) (*authUserAdminService.SetUpTwoFactorAuthResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting SetUpTwoFactorAuth", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting SetUpTwoFactorAuth", map[string]any{
 		"method":    "SetUpTwoFactorAuth",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "setup_2fa",
 	}, "SERVICE", nil)
 
-	qrCodeImage, otpSecret, errorType, err := s.repo.SetUpTwoFactorAuth(req.UserID)
+	qrCodeImage, otpSecret, errorType, err := s.repo.SetUpTwoFactorAuth(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to set up 2FA", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to set up 2FA", map[string]any{
 			"method":    "SetUpTwoFactorAuth",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while setting up two factor authentication", errorType, err)
@@ -1830,10 +1830,10 @@ func (s *AuthUserAdminService) SetUpTwoFactorAuth(ctx context.Context, req *auth
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1841,9 +1841,9 @@ func (s *AuthUserAdminService) SetUpTwoFactorAuth(ctx context.Context, req *auth
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "2FA set up successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "2FA set up successfully", map[string]any{
 		"method": "SetUpTwoFactorAuth",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.SetUpTwoFactorAuthResponse{
@@ -1855,25 +1855,25 @@ func (s *AuthUserAdminService) SetUpTwoFactorAuth(ctx context.Context, req *auth
 
 // VerifyTwoFactorAuth verifies 2FA setup
 func (s *AuthUserAdminService) VerifyTwoFactorAuth(ctx context.Context, req *authUserAdminService.VerifyTwoFactorAuthRequest) (*authUserAdminService.VerifyTwoFactorAuthResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting VerifyTwoFactorAuth", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting VerifyTwoFactorAuth", map[string]any{
 		"method":    "VerifyTwoFactorAuth",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "verify_2fa",
 	}, "SERVICE", nil)
 
-	done, errorType, err := s.repo.VerifyTwoFactorAuth(req.UserID, req.TwoFactorCode)
+	done, errorType, err := s.repo.VerifyTwoFactorAuth(req.UserId, req.TwoFactorCode)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error verifying 2FA", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error verifying 2FA", map[string]any{
 			"method":    "VerifyTwoFactorAuth",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while verifying two factor authentication", errorType, err)
 	}
 	if !done {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Invalid 2FA code", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Invalid 2FA code", map[string]any{
 			"method":    "VerifyTwoFactorAuth",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": customerrors.ERR_2FA_VERIFY_INVALID,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.InvalidArgument, "Invalid two factor authentication code", customerrors.ERR_2FA_VERIFY_INVALID, nil)
@@ -1881,10 +1881,10 @@ func (s *AuthUserAdminService) VerifyTwoFactorAuth(ctx context.Context, req *aut
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1892,9 +1892,9 @@ func (s *AuthUserAdminService) VerifyTwoFactorAuth(ctx context.Context, req *aut
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "2FA verified successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "2FA verified successfully", map[string]any{
 		"method": "VerifyTwoFactorAuth",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.VerifyTwoFactorAuthResponse{
@@ -1905,35 +1905,35 @@ func (s *AuthUserAdminService) VerifyTwoFactorAuth(ctx context.Context, req *aut
 
 // DisableTwoFactorAuth disables 2FA for a user
 func (s *AuthUserAdminService) DisableTwoFactorAuth(ctx context.Context, req *authUserAdminService.DisableTwoFactorAuthRequest) (*authUserAdminService.DisableTwoFactorAuthResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting DisableTwoFactorAuth", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting DisableTwoFactorAuth", map[string]any{
 		"method":    "DisableTwoFactorAuth",
-		"userID":    req.UserID,
+		"userId":    req.UserId,
 		"operation": "disable_2fa",
 	}, "SERVICE", nil)
 
-	valid, errorType, err := s.repo.CheckUserPassword(req.UserID, req.Password)
+	valid, errorType, err := s.repo.CheckUserPassword(req.UserId, req.Password)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error checking user credentials", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error checking user credentials", map[string]any{
 			"method":    "DisableTwoFactorAuth",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while checking user credentials", errorType, err)
 	}
 	if !valid {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Incorrect password", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Incorrect password", map[string]any{
 			"method":    "DisableTwoFactorAuth",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": customerrors.ERR_2FA_DISABLE_CRED_WRONG,
 		}, "SERVICE", nil)
 		return nil, s.createGrpcError(codes.PermissionDenied, "The provided password is incorrect", customerrors.ERR_2FA_DISABLE_CRED_WRONG, nil)
 	}
 
-	errorType, err = s.repo.DisableTwoFactorAuth(req.UserID)
+	errorType, err = s.repo.DisableTwoFactorAuth(req.UserId)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Failed to disable 2FA", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Failed to disable 2FA", map[string]any{
 			"method":    "DisableTwoFactorAuth",
-			"userID":    req.UserID,
+			"userId":    req.UserId,
 			"errorType": errorType,
 		}, "SERVICE", err)
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while disabling two factor authentication", errorType, err)
@@ -1941,10 +1941,10 @@ func (s *AuthUserAdminService) DisableTwoFactorAuth(ctx context.Context, req *au
 
 	// Invalidate non-admin caches
 	cacheKeys := []string{
-		fmt.Sprintf("user_profile:id:%s", req.UserID),
-		fmt.Sprintf("ban_status:%s", req.UserID),
-		fmt.Sprintf("following:%s", req.UserID),
-		fmt.Sprintf("followers:%s", req.UserID),
+		fmt.Sprintf("user_profile:id:%s", req.UserId),
+		fmt.Sprintf("ban_status:%s", req.UserId),
+		fmt.Sprintf("following:%s", req.UserId),
+		fmt.Sprintf("followers:%s", req.UserId),
 	}
 	for _, key := range cacheKeys {
 		if err := s.cache.Delete(key); err != nil {
@@ -1952,9 +1952,9 @@ func (s *AuthUserAdminService) DisableTwoFactorAuth(ctx context.Context, req *au
 		}
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "2FA disabled successfully", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "2FA disabled successfully", map[string]any{
 		"method": "DisableTwoFactorAuth",
-		"userID": req.UserID,
+		"userId": req.UserId,
 	}, "SERVICE", nil)
 
 	return &authUserAdminService.DisableTwoFactorAuthResponse{
@@ -1964,7 +1964,7 @@ func (s *AuthUserAdminService) DisableTwoFactorAuth(ctx context.Context, req *au
 
 // GetTwoFactorAuthStatus retrieves the 2FA status for a user
 func (s *AuthUserAdminService) GetTwoFactorAuthStatus(ctx context.Context, req *authUserAdminService.GetTwoFactorAuthStatusRequest) (*authUserAdminService.GetTwoFactorAuthStatusResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting GetTwoFactorAuthStatus", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting GetTwoFactorAuthStatus", map[string]any{
 		"method":    "GetTwoFactorAuthStatus",
 		"email":     req.Email,
 		"operation": "get_2fa_status",
@@ -1972,7 +1972,7 @@ func (s *AuthUserAdminService) GetTwoFactorAuthStatus(ctx context.Context, req *
 
 	isEnabled, errorType, err := s.repo.GetTwoFactorAuthStatus(req.Email)
 	if err != nil {
-		s.logger.Log(zapcore.ErrorLevel, req.TraceID, "Error retrieving 2FA status", map[string]any{
+		s.logger.Log(zapcore.ErrorLevel, req.TraceId, "Error retrieving 2FA status", map[string]any{
 			"method":    "GetTwoFactorAuthStatus",
 			"email":     req.Email,
 			"errorType": errorType,
@@ -1980,7 +1980,7 @@ func (s *AuthUserAdminService) GetTwoFactorAuthStatus(ctx context.Context, req *
 		return nil, s.createGrpcError(codes.NotFound, "An error occurred while retrieving two factor authentication status", errorType, err)
 	}
 
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "2FA status retrieved", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "2FA status retrieved", map[string]any{
 		"method":    "GetTwoFactorAuthStatus",
 		"email":     req.Email,
 		"isEnabled": isEnabled,
@@ -1993,14 +1993,14 @@ func (s *AuthUserAdminService) GetTwoFactorAuthStatus(ctx context.Context, req *
 
 // UsernameAvailable checks if a username is available
 func (s *AuthUserAdminService) UsernameAvailable(ctx context.Context, req *authUserAdminService.UsernameAvailableRequest) (*authUserAdminService.UsernameAvailableResponse, error) {
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Starting UsernameAvailable", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Starting UsernameAvailable", map[string]any{
 		"method":    "UsernameAvailable",
 		"username":  req.Username,
 		"operation": "check_username",
 	}, "SERVICE", nil)
 
 	if len(req.Username) < 3 {
-		s.logger.Log(zapcore.InfoLevel, req.TraceID, "Username too short", map[string]any{
+		s.logger.Log(zapcore.InfoLevel, req.TraceId, "Username too short", map[string]any{
 			"method":   "UsernameAvailable",
 			"username": req.Username,
 		}, "SERVICE", nil)
@@ -2010,7 +2010,7 @@ func (s *AuthUserAdminService) UsernameAvailable(ctx context.Context, req *authU
 	}
 
 	status := s.repo.UserAvailable(req.Username)
-	s.logger.Log(zapcore.InfoLevel, req.TraceID, "Username availability checked", map[string]any{
+	s.logger.Log(zapcore.InfoLevel, req.TraceId, "Username availability checked", map[string]any{
 		"method":   "UsernameAvailable",
 		"username": req.Username,
 		"status":   status,
@@ -2019,4 +2019,57 @@ func (s *AuthUserAdminService) UsernameAvailable(ctx context.Context, req *authU
 	return &authUserAdminService.UsernameAvailableResponse{
 		Status: status,
 	}, nil
+}
+
+func (s *AuthUserAdminService) GetBulkUserMetadata(ctx context.Context, req *authUserAdminService.GetBulkUserMetadataRequest) (*authUserAdminService.GetBulkUserMetadataResponse, error) {
+	if req == nil || len(req.UserIds) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "userIds cannot be empty")
+	}
+
+	userMetadatas, err := s.repo.GetBulkUserData(req.UserIds)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to fetch user data: %v", err)
+	}
+
+	mapped := mapUsersToMetadata(userMetadatas)
+
+	return &authUserAdminService.GetBulkUserMetadataResponse{
+		UserProfileMetadata: mapped,
+	}, nil
+}
+
+func mapUsersToMetadata(users []db.User) []*authUserAdminService.UserProfileMetadata {
+	if len(users) == 0 {
+		return nil
+	}
+
+	metadata := make([]*authUserAdminService.UserProfileMetadata, 0, len(users))
+
+	for _, u := range users {
+		mp := &authUserAdminService.UserProfileMetadata{
+			UserId:    u.ID,
+			Exists:    "true",
+			UserName:  u.UserName,
+			FirstName: u.FirstName,
+			LastName:  u.LastName,
+			Country:   u.Country,
+			//Role:              u.Role,
+			PrimaryLanguageId: u.PrimaryLanguageId,
+			AvatarURL:         u.AvatarURL,
+			Bio:               u.Bio,
+		}
+
+		//check if any social exists before assigning
+		if u.Github != "" || u.Twitter != "" || u.Linkedin != "" {
+			mp.Socials = &authUserAdminService.Socials{
+				Github:   u.Github,
+				Twitter:  u.Twitter,
+				Linkedin: u.Linkedin,
+			}
+		}
+
+		metadata = append(metadata, mp)
+	}
+
+	return metadata
 }

@@ -47,6 +47,16 @@ github.com/lijuuu/GlobalProtoXcode v0.0.0-20250429072753-1eec2c6332ed h1:31Rn5Cm
 github.com/lijuuu/GlobalProtoXcode v0.0.0-20250429072753-1eec2c6332ed/go.mod h1:Tt/SSoiRXSrQ+uVdaJrJsI5rWicuZcRDFOsrybrvclA=
 github.com/lijuuu/GlobalProtoXcode v0.0.0-20250617033802-3e75143397ea h1:9lbhVjt8NUGvmudYcoXDgbypWbMQ6c71A2GMRkwmfWs=
 github.com/lijuuu/GlobalProtoXcode v0.0.0-20250617033802-3e75143397ea/go.mod h1:Tt/SSoiRXSrQ+uVdaJrJsI5rWicuZcRDFOsrybrvclA=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250617070040-9dc954497936 h1:Y+9oFtOeO6x21n7tN7T13IUgrwbvv0bnfjWaaz3BOeM=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250617070040-9dc954497936/go.mod h1:Tt/SSoiRXSrQ+uVdaJrJsI5rWicuZcRDFOsrybrvclA=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250617071542-88f1302a91ca h1:jG0msn1ICJckjg/rof+pE2luSGA1iCM9VKuJR/b1krE=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250617071542-88f1302a91ca/go.mod h1:Tt/SSoiRXSrQ+uVdaJrJsI5rWicuZcRDFOsrybrvclA=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250617083829-93ec7bd26d81 h1:1WrOOlLe99NG+AQU2nXSvfUbKChnqbv4FqKWZZNm5z4=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250617083829-93ec7bd26d81/go.mod h1:Tt/SSoiRXSrQ+uVdaJrJsI5rWicuZcRDFOsrybrvclA=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250719135342-f3b0e780fd6d h1:kBxQKz5X1M4wrmCaM+lPKg1PqpFc5+rmH+NOMmwQxs8=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250719135342-f3b0e780fd6d/go.mod h1:Tt/SSoiRXSrQ+uVdaJrJsI5rWicuZcRDFOsrybrvclA=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250826050124-44522759b3b9 h1:uc3avofcKCPQSqCawa430tHPWYjpuHLxqLFmPNEOvSc=
+github.com/lijuuu/GlobalProtoXcode v0.0.0-20250826050124-44522759b3b9/go.mod h1:Tt/SSoiRXSrQ+uVdaJrJsI5rWicuZcRDFOsrybrvclA=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
 github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=

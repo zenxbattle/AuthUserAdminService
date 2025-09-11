@@ -15,10 +15,10 @@ type Config struct {
 	JWTSecretKey           string
 	APPURL                 string
 	FRONTENDURL            string
-	SMTPAppKey             string // New field for SMTP app key
-	SMTPHost               string // SMTP host (e.g., smtp.gmail.com)
-	SMTPPort               string // SMTP port (e.g., "587" for TLS)
-	SMTPUser               string // SMTP username (e.g., your email)
+	SMTPAppKey             string 
+	SMTPHost               string 
+	SMTPPort               string 
+	SMTPUser               string 
 	AdminPassword          string
 	AdminUsername          string
 	GoogleClientID         string
@@ -63,7 +63,6 @@ func LoadConfig() Config {
 	return config
 }
 
-// getEnv retrieves an environment variable or returns a default value
 func getEnv(key, defaultValue string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value

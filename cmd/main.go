@@ -16,8 +16,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-//TODO - all snake cases to pascal. only use snake in database.
-
 func main() {
 	// Load configuration
 	config := configs.LoadConfig()
@@ -58,7 +56,7 @@ func main() {
 
 	// Initialize repository and service
 	userRepo := repository.NewUserRepository(dbConn, &config, logStreamer)
-	authUserAdminService := service.NewAuthUserAdminService(userRepo, *redisCache, &config, config.JWTSecretKey,logStreamer)
+	authUserAdminService := service.NewAuthUserAdminService(userRepo, *redisCache, &config, config.JWTSecretKey, logStreamer)
 
 	// Start gRPC server
 	lis, err := net.Listen("tcp", ":"+config.UserGRPCPort)

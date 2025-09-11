@@ -13,7 +13,7 @@ type User struct {
 	Country           string `gorm:"type:varchar(100);not null" json:"country"`
 	Role              string `gorm:"type:varchar(50);not null;index:idx_role_status" json:"role"`
 	Bio               string `gorm:"type:varchar(200);" json:"bio"`
-	PrimaryLanguageID string `gorm:"type:varchar(10);not null" json:"primary_language_id"`
+	PrimaryLanguageId string `gorm:"type:varchar(10);not null" json:"primary_language_id"`
 	Email             string `gorm:"type:varchar(255);unique;not null;index" json:"email"`
 	AuthType          string `gorm:"type:varchar(50);not null" json:"auth_type"` // email, google, github
 	// AuthID            string         `gorm:"type:varchar(255)" json:"auth_id"` // google id, github id
@@ -28,7 +28,7 @@ type User struct {
 	TwoFactorEnabled  bool           `gorm:"default:false;not null" json:"two_factor_enabled"`
 	IsVerified        bool           `gorm:"default:false;not null" json:"is_verified"`
 	TwoFactorSecret   string         `gorm:"type:varchar(255)" json:"two_factor_secret"`
-	AvatarData        string         `gorm:"type:text" json:"avatar_data"`
+	AvatarURL         string         `gorm:"type:text" json:"avatar_url"`
 	Github            string         `gorm:"type:varchar(255)" json:"github"`
 	Twitter           string         `gorm:"type:varchar(255)" json:"twitter"`
 	Linkedin          string         `gorm:"type:varchar(255)" json:"linkedin"`

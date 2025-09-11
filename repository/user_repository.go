@@ -44,7 +44,7 @@ func NewUserRepository(db *gorm.DB, config *configs.Config, logger *zap_betterst
 }
 
 func (r *UserRepository) CreateUser(req *AuthUserAdminService.RegisterUserRequest) (string, string, error) {
-	traceID := req.TraceID
+	traceID := req.TraceId
 	r.logger.Log(zapcore.InfoLevel, traceID, "Starting CreateUser", map[string]any{
 		"method": "CreateUser",
 		"email":  req.Email,
@@ -329,10 +329,10 @@ func (r *UserRepository) UpdateUserOnTwoFactorAuth(user db.User) (string, error)
 }
 
 func (r *UserRepository) UpdateProfile(req *AuthUserAdminService.UpdateProfileRequest) (string, error) {
-	traceID := req.TraceID
+	traceID := req.TraceId
 	r.logger.Log(zapcore.InfoLevel, traceID, "Starting UpdateProfile", map[string]any{
 		"method": "UpdateProfile",
-		"userID": req.UserID,
+		"userID": req.UserId,
 	}, "REPOSITORY", nil)
 
 	if req == nil {
@@ -342,7 +342,7 @@ func (r *UserRepository) UpdateProfile(req *AuthUserAdminService.UpdateProfileRe
 		}, "REPOSITORY", nil)
 		return customerrors.ERR_PARAM_EMPTY, fmt.Errorf("update profile request cannot be nil")
 	}
-	if req.UserID == "" {
+	if req.UserId == "" {
 		r.logger.Log(zapcore.ErrorLevel, traceID, "Empty user ID", map[string]any{
 			"method":    "UpdateProfile",
 			"errorType": customerrors.ERR_PARAM_EMPTY,
@@ -354,23 +354,23 @@ func (r *UserRepository) UpdateProfile(req *AuthUserAdminService.UpdateProfileRe
 		socials = req.Socials
 	}
 	user := db.User{
-		ID:                req.UserID,
+		ID:                req.UserId,
 		FirstName:         req.FirstName,
 		LastName:          req.LastName,
 		Country:           req.Country,
 		UserName:          req.UserName,
 		Bio:               req.Bio,
-		PrimaryLanguageID: req.PrimaryLanguageID,
+		PrimaryLanguageId: req.PrimaryLanguageId,
 		MuteNotifications: req.MuteNotifications,
 		Github:            socials.Github,
 		Twitter:           socials.Twitter,
 		Linkedin:          socials.Linkedin,
 		UpdatedAt:         time.Now().Unix(),
 	}
-	if err := r.db.Model(&user).Where("id = ? AND deleted_at IS NULL", req.UserID).Updates(user).Error; err != nil {
+	if err := r.db.Model(&user).Where("id = ? AND deleted_at IS NULL", req.UserId).Updates(user).Error; err != nil {
 		r.logger.Log(zapcore.ErrorLevel, traceID, "Failed to update profile", map[string]any{
 			"method":    "UpdateProfile",
-			"userID":    req.UserID,
+			"userID":    req.UserId,
 			"errorType": customerrors.ERR_PROFILE_UPDATE_FAILED,
 		}, "REPOSITORY", err)
 		return customerrors.ERR_PROFILE_UPDATE_FAILED, fmt.Errorf("unable to update profile")
@@ -378,16 +378,16 @@ func (r *UserRepository) UpdateProfile(req *AuthUserAdminService.UpdateProfileRe
 
 	r.logger.Log(zapcore.InfoLevel, traceID, "Profile updated successfully", map[string]any{
 		"method": "UpdateProfile",
-		"userID": req.UserID,
+		"userID": req.UserId,
 	}, "REPOSITORY", nil)
 	return "", nil
 }
 
 func (r *UserRepository) UpdateProfileImage(req *AuthUserAdminService.UpdateProfileImageRequest) (string, error) {
-	traceID := req.TraceID
+	traceID := req.TraceId
 	r.logger.Log(zapcore.InfoLevel, traceID, "Starting UpdateProfileImage", map[string]any{
 		"method": "UpdateProfileImage",
-		"userID": req.UserID,
+		"userID": req.UserId,
 	}, "REPOSITORY", nil)
 
 	if req == nil {
@@ -397,21 +397,21 @@ func (r *UserRepository) UpdateProfileImage(req *AuthUserAdminService.UpdateProf
 		}, "REPOSITORY", nil)
 		return customerrors.ERR_PARAM_EMPTY, fmt.Errorf("update profile image request cannot be nil")
 	}
-	if req.UserID == "" {
+	if req.UserId == "" {
 		r.logger.Log(zapcore.ErrorLevel, traceID, "Empty user ID", map[string]any{
 			"method":    "UpdateProfileImage",
 			"errorType": customerrors.ERR_PARAM_EMPTY,
 		}, "REPOSITORY", nil)
 		return customerrors.ERR_PARAM_EMPTY, fmt.Errorf("user ID cannot be empty")
 	}
-	if err := r.db.Model(&db.User{}).Where("id = ? AND deleted_at IS NULL", req.UserID).
+	if err := r.db.Model(&db.User{}).Where("id = ? AND deleted_at IS NULL", req.UserId).
 		Updates(map[string]interface{}{
-			"avatar_data": req.AvatarURL,
+			"avatar_data": req.AvatarUrl,
 			"updated_at":  time.Now().Unix(),
 		}).Error; err != nil {
 		r.logger.Log(zapcore.ErrorLevel, traceID, "Failed to update profile image", map[string]any{
 			"method":    "UpdateProfileImage",
-			"userID":    req.UserID,
+			"userID":    req.UserId,
 			"errorType": customerrors.ERR_PROFILE_IMAGE_UPDATE_FAILED,
 		}, "REPOSITORY", err)
 		return customerrors.ERR_PROFILE_IMAGE_UPDATE_FAILED, fmt.Errorf("unable to update profile picture")
@@ -419,7 +419,7 @@ func (r *UserRepository) UpdateProfileImage(req *AuthUserAdminService.UpdateProf
 
 	r.logger.Log(zapcore.InfoLevel, traceID, "Profile image updated successfully", map[string]any{
 		"method": "UpdateProfileImage",
-		"userID": req.UserID,
+		"userID": req.UserId,
 	}, "REPOSITORY", nil)
 	return "", nil
 }
@@ -462,18 +462,18 @@ func (r *UserRepository) GetUserProfileByUserID(userID string) (*AuthUserAdminSe
 	}, "REPOSITORY", nil)
 	return &AuthUserAdminService.GetUserProfileResponse{
 		UserProfile: &AuthUserAdminService.UserProfile{
-			UserID:            user.ID,
+			UserId:            user.ID,
 			UserName:          user.UserName,
 			FirstName:         user.FirstName,
 			LastName:          user.LastName,
-			AvatarData:        user.AvatarData,
+			AvatarURL:         user.AvatarURL,
 			Email:             user.Email,
 			Role:              user.Role,
 			Bio:               user.Bio,
 			Country:           user.Country,
 			IsBanned:          user.IsBanned,
 			IsVerified:        user.IsVerified,
-			PrimaryLanguageID: user.PrimaryLanguageID,
+			PrimaryLanguageId: user.PrimaryLanguageId,
 			MuteNotifications: user.MuteNotifications,
 			TwoFactorEnabled:  user.TwoFactorEnabled,
 			Socials: &AuthUserAdminService.Socials{
@@ -525,18 +525,18 @@ func (r *UserRepository) GetUserProfileByUsername(userName string) (*AuthUserAdm
 	}, "REPOSITORY", nil)
 	return &AuthUserAdminService.GetUserProfileResponse{
 		UserProfile: &AuthUserAdminService.UserProfile{
-			UserID:            user.ID,
+			UserId:            user.ID,
 			UserName:          user.UserName,
 			FirstName:         user.FirstName,
 			LastName:          user.LastName,
-			AvatarData:        user.AvatarData,
+			AvatarURL:         user.AvatarURL,
 			Email:             user.Email,
 			Role:              user.Role,
 			Bio:               user.Bio,
 			Country:           user.Country,
 			IsBanned:          user.IsBanned,
 			IsVerified:        user.IsVerified,
-			PrimaryLanguageID: user.PrimaryLanguageID,
+			PrimaryLanguageId: user.PrimaryLanguageId,
 			MuteNotifications: user.MuteNotifications,
 			TwoFactorEnabled:  user.TwoFactorEnabled,
 			Socials: &AuthUserAdminService.Socials{
@@ -777,7 +777,7 @@ func (r *UserRepository) GetFollowing(userID string) ([]*AuthUserAdminService.Us
 	var profiles []*AuthUserAdminService.UserProfile
 	for _, u := range users {
 		profiles = append(profiles, &AuthUserAdminService.UserProfile{
-			UserID:    u.ID,
+			UserId:    u.ID,
 			FirstName: u.FirstName,
 			LastName:  u.LastName,
 			Email:     u.Email,
@@ -842,7 +842,7 @@ func (r *UserRepository) GetFollowers(userID string) ([]*AuthUserAdminService.Us
 	var profiles []*AuthUserAdminService.UserProfile
 	for _, u := range users {
 		profiles = append(profiles, &AuthUserAdminService.UserProfile{
-			UserID:    u.ID,
+			UserId:    u.ID,
 			FirstName: u.FirstName,
 			LastName:  u.LastName,
 			Email:     u.Email,
@@ -920,7 +920,7 @@ func (r *UserRepository) CheckFollowRelationship(ownerUserID, targetUserID strin
 }
 
 func (r *UserRepository) CreateUserAdmin(req *AuthUserAdminService.CreateUserAdminRequest) (string, string, error) {
-	traceID := req.TraceID
+	traceID := req.TraceId
 	r.logger.Log(zapcore.InfoLevel, traceID, "Starting CreateUserAdmin", map[string]any{
 		"method": "CreateUserAdmin",
 		"email":  req.Email,
@@ -979,7 +979,7 @@ func (r *UserRepository) CreateUserAdmin(req *AuthUserAdminService.CreateUserAdm
 		LastName:          req.LastName,
 		Country:           req.Country,
 		Role:              req.Role,
-		PrimaryLanguageID: req.PrimaryLanguageID,
+		PrimaryLanguageId: req.PrimaryLanguageId,
 		Email:             req.Email,
 		AuthType:          req.AuthType,
 		HashedPassword:    string(hashedPassword),
@@ -1006,10 +1006,10 @@ func (r *UserRepository) CreateUserAdmin(req *AuthUserAdminService.CreateUserAdm
 }
 
 func (r *UserRepository) UpdateUserAdmin(req *AuthUserAdminService.UpdateUserAdminRequest) (string, error) {
-	traceID := req.TraceID
+	traceID := req.TraceId
 	r.logger.Log(zapcore.InfoLevel, traceID, "Starting UpdateUserAdmin", map[string]any{
 		"method": "UpdateUserAdmin",
-		"userID": req.UserID,
+		"userID": req.UserId,
 	}, "REPOSITORY", nil)
 
 	if req == nil {
@@ -1019,7 +1019,7 @@ func (r *UserRepository) UpdateUserAdmin(req *AuthUserAdminService.UpdateUserAdm
 		}, "REPOSITORY", nil)
 		return customerrors.ERR_PARAM_EMPTY, fmt.Errorf("update admin request cannot be nil")
 	}
-	if req.UserID == "" {
+	if req.UserId == "" {
 		r.logger.Log(zapcore.ErrorLevel, traceID, "Empty user ID", map[string]any{
 			"method":    "UpdateUserAdmin",
 			"errorType": customerrors.ERR_PARAM_EMPTY,
@@ -1029,7 +1029,7 @@ func (r *UserRepository) UpdateUserAdmin(req *AuthUserAdminService.UpdateUserAdm
 	if req.Password != "" && !IsValidPassword(req.Password) {
 		r.logger.Log(zapcore.ErrorLevel, traceID, "Invalid password", map[string]any{
 			"method":    "UpdateUserAdmin",
-			"userID":    req.UserID,
+			"userID":    req.UserId,
 			"errorType": customerrors.ERR_ADMIN_UPDATE_INVALID_PASSWORD,
 		}, "REPOSITORY", nil)
 		return customerrors.ERR_ADMIN_UPDATE_INVALID_PASSWORD, fmt.Errorf("invalid password format")
@@ -1041,13 +1041,13 @@ func (r *UserRepository) UpdateUserAdmin(req *AuthUserAdminService.UpdateUserAdm
 	}
 
 	user := db.User{
-		ID:                req.UserID,
+		ID:                req.UserId,
 		FirstName:         req.FirstName,
 		LastName:          req.LastName,
 		Country:           req.Country,
 		Role:              req.Role,
 		Email:             req.Email,
-		PrimaryLanguageID: req.PrimaryLanguageID,
+		PrimaryLanguageId: req.PrimaryLanguageId,
 		MuteNotifications: req.MuteNotifications,
 		Github:            socials.Github,
 		Twitter:           socials.Twitter,
@@ -1059,7 +1059,7 @@ func (r *UserRepository) UpdateUserAdmin(req *AuthUserAdminService.UpdateUserAdm
 		if err != nil {
 			r.logger.Log(zapcore.ErrorLevel, traceID, "Failed to hash password", map[string]any{
 				"method":    "UpdateUserAdmin",
-				"userID":    req.UserID,
+				"userID":    req.UserId,
 				"errorType": customerrors.ERR_PASSWORD_HASH_FAILED,
 			}, "REPOSITORY", err)
 			return customerrors.ERR_PASSWORD_HASH_FAILED, fmt.Errorf("failed to hash password")
@@ -1067,10 +1067,10 @@ func (r *UserRepository) UpdateUserAdmin(req *AuthUserAdminService.UpdateUserAdm
 		user.HashedPassword = string(hashedPassword)
 	}
 
-	if err := r.db.Model(&user).Where("id = ? AND deleted_at IS NULL", req.UserID).Updates(user).Error; err != nil {
+	if err := r.db.Model(&user).Where("id = ? AND deleted_at IS NULL", req.UserId).Updates(user).Error; err != nil {
 		r.logger.Log(zapcore.ErrorLevel, traceID, "Failed to update admin user", map[string]any{
 			"method":    "UpdateUserAdmin",
-			"userID":    req.UserID,
+			"userID":    req.UserId,
 			"errorType": customerrors.ERR_ADMIN_UPDATE_FAILED,
 		}, "REPOSITORY", err)
 		return customerrors.ERR_ADMIN_UPDATE_FAILED, fmt.Errorf("failed to update admin user")
@@ -1078,7 +1078,7 @@ func (r *UserRepository) UpdateUserAdmin(req *AuthUserAdminService.UpdateUserAdm
 
 	r.logger.Log(zapcore.InfoLevel, traceID, "Admin user updated successfully", map[string]any{
 		"method": "UpdateUserAdmin",
-		"userID": req.UserID,
+		"userID": req.UserId,
 	}, "REPOSITORY", nil)
 	return "", nil
 }
@@ -1271,7 +1271,7 @@ func (r *UserRepository) SoftDeleteUserAdmin(userID string) (string, error) {
 }
 
 func (r *UserRepository) GetAllUsers(req *AuthUserAdminService.GetAllUsersRequest) ([]*AuthUserAdminService.UserProfile, int32, string, string, string, error) {
-	traceID := req.TraceID
+	traceID := req.TraceId
 	r.logger.Log(zapcore.InfoLevel, traceID, "Starting GetAllUsers", map[string]any{
 		"method": "GetAllUsers",
 	}, "REPOSITORY", nil)
@@ -1404,16 +1404,16 @@ func (r *UserRepository) GetAllUsers(req *AuthUserAdminService.GetAllUsersReques
 	profiles := make([]*AuthUserAdminService.UserProfile, 0, len(users))
 	for _, u := range users {
 		profiles = append(profiles, &AuthUserAdminService.UserProfile{
-			UserID:            u.ID,
+			UserId:            u.ID,
 			UserName:          u.UserName,
 			FirstName:         u.FirstName,
 			LastName:          u.LastName,
 			Country:           u.Country,
 			Role:              u.Role,
-			PrimaryLanguageID: u.PrimaryLanguageID,
+			PrimaryLanguageId: u.PrimaryLanguageId,
 			Email:             u.Email,
 			AuthType:          u.AuthType,
-			AvatarData:        u.AvatarData,
+			AvatarURL:         u.AvatarURL,
 			MuteNotifications: u.MuteNotifications,
 			IsBanned:          u.IsBanned,
 			BanReason:         u.BanReason,
@@ -2248,7 +2248,7 @@ func (r *UserRepository) GetBanHistory(userID string) ([]*AuthUserAdminService.B
 	for _, ban := range bans {
 		history = append(history, &AuthUserAdminService.BanHistory{
 			Id:        ban.ID,
-			UserID:    ban.UserID,
+			UserId:    ban.UserID,
 			BanType:   ban.BanType,
 			BannedAt:  ban.BannedAt,
 			BanReason: ban.BanReason,
@@ -2302,17 +2302,17 @@ func (r *UserRepository) SearchUsers(query, pageToken string, limit int32) ([]*A
 	var profiles []*AuthUserAdminService.UserProfile
 	for _, u := range users {
 		profiles = append(profiles, &AuthUserAdminService.UserProfile{
-			UserID:            u.ID,
+			UserId:            u.ID,
 			UserName:          u.UserName,
 			FirstName:         u.FirstName,
 			LastName:          u.LastName,
-			AvatarData:        u.AvatarData,
+			AvatarURL:         u.AvatarURL,
 			Email:             u.Email,
 			Role:              u.Role,
 			Country:           u.Country,
 			Bio:               u.Bio,
 			IsBanned:          u.IsBanned,
-			PrimaryLanguageID: u.PrimaryLanguageID,
+			PrimaryLanguageId: u.PrimaryLanguageId,
 			Socials: &AuthUserAdminService.Socials{
 				Github:   u.Github,
 				Twitter:  u.Twitter,
@@ -2325,7 +2325,7 @@ func (r *UserRepository) SearchUsers(query, pageToken string, limit int32) ([]*A
 	var nextPageToken string
 	if len(profiles) > int(limit) {
 		profiles = profiles[:limit]
-		lastID := profiles[len(profiles)-1].UserID
+		lastID := profiles[len(profiles)-1].UserId
 		nextPageToken = base64.StdEncoding.EncodeToString([]byte(lastID))
 	}
 
@@ -2690,4 +2690,17 @@ func (r *UserRepository) UserAvailable(username string) bool {
 		"username": username,
 	}, "REPOSITORY", nil)
 	return false
+}
+
+func (r *UserRepository) GetBulkUserData(userIDs []string) ([]db.User, error) {
+	var users []db.User
+	if len(userIDs) == 0 {
+		return users, nil // nothing to fetch
+	}
+
+	err := r.db.Where("id IN ?", userIDs).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }
