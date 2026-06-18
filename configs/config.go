@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -34,10 +35,18 @@ func LoadConfig() Config {
 	if err != nil {
 		log.Println("Error loading .env file", err)
 	}
+
+	pgUser := getEnv("POSTGRES_USER", "postgres")
+	pgPassword := getEnv("POSTGRES_PASSWORD", "postgres")
+	pgHost := getEnv("POSTGRES_HOST", "postgres.default.svc.cluster.local")
+	pgPort := getEnv("POSTGRES_PORT", "5432")
+	pgDB := getEnv("POSTGRES_DB", "postgres")
+	pgDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", pgUser, pgPassword, pgHost, pgPort, pgDB)
+
 	config := Config{
 		Environment:        getEnv("ENVIRONMENT", "development"),
 		UserGRPCPort:       getEnv("USERGRPCPORT", "50051"),
-		PostgresDSN:        getEnv("POSTGRESDSN", "host=localhost port=5432 user=admin password=password dbname=xcodedev sslmode=disable"),
+		PostgresDSN:        pgDSN,
 		JWTSecretKey:       getEnv("JWTSECRETKEY", "secretLeetcode"),
 		APPURL:             getEnv("APPURL", "http://localhost:7000"),
 		FRONTENDURL:        getEnv("FRONTENDURL", "http://localhost:8080"),
