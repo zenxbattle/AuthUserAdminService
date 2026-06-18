@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	"time"
 
 	"xcode/cache"
 	"xcode/configs"
@@ -12,9 +13,22 @@ import (
 
 	authUserAdminProto "github.com/lijuuu/GlobalProtoXcode/AuthUserAdminService"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"go.uber.org/zapcore"
 	"google.golang.org/grpc"
+	"gorm.io/gorm"
 )
+
+func mustConnect(fn func() error, name string, logShipper *logutil.LogShipper, logger *zap.Logger) {
+	for {
+		err := fn()
+		if err == nil {
+			logShipper.Log(zapcore.InfoLevel, "GENESISTRACEID", "Connected to "+name, nil, "INIT", nil)
+			return
+		}
+		logShipper.Log(zapcore.WarnLevel, "GENESISTRACEID", "Retrying connection to "+name, map[string]any{"error": err.Error()}, "INIT", nil)
+		time.Sleep(3 * time.Second)
+	}
+}
 
 func main() {
 	// Load configuration
@@ -36,14 +50,13 @@ func main() {
 	// Initialize LokiLogShipper
 	logShipper := logutil.New("auth-user-admin-service")
 
-	// Initialize PostgreSQL connection
-	dbConn, err := db.InitDB(config.PostgresDSN)
-	if err != nil {
-		logShipper.Log(zapcore.ErrorLevel, "GENESISTRACEID", "Failed to connect to PostgreSQL", map[string]any{
-			"error": err.Error(),
-		}, "DB INIT", nil)
-		// logger.Fatal("Failed to connect to PostgreSQL", zap.Error(err))
-	}
+	// Initialize PostgreSQL connection with retry
+	var dbConn *gorm.DB
+	mustConnect(func() error {
+		var dbErr error
+		dbConn, dbErr = db.InitDB(config.PostgresDSN)
+		return dbErr
+	}, "PostgreSQL", logShipper, logger)
 	defer db.Close(dbConn)
 
 	// Initialize Redis cache
