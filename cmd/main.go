@@ -6,7 +6,7 @@ import (
 	"xcode/cache"
 	"xcode/configs"
 	"xcode/db"
-	zap_betterstack "xcode/logger"
+	"xcode/logutil"
 	"xcode/repository"
 	"xcode/service"
 
@@ -33,18 +33,13 @@ func main() {
 	}
 	defer logger.Sync()
 
-	// Initialize BetterStackLogStreamer
-	logStreamer := zap_betterstack.NewBetterStackLogStreamer(
-		config.BetterStackSourceToken,
-		config.Environment,
-		config.BetterStackUploadURL,
-		logger,
-	)
+	// Initialize LokiLogShipper
+	logShipper := logutil.New("auth-user-admin-service")
 
 	// Initialize PostgreSQL connection
 	dbConn, err := db.InitDB(config.PostgresDSN)
 	if err != nil {
-		logStreamer.Log(zapcore.ErrorLevel, "GENESISTRACEID", "Failed to connect to PostgreSQL", map[string]any{
+		logShipper.Log(zapcore.ErrorLevel, "GENESISTRACEID", "Failed to connect to PostgreSQL", map[string]any{
 			"error": err.Error(),
 		}, "DB INIT", nil)
 		// logger.Fatal("Failed to connect to PostgreSQL", zap.Error(err))
@@ -55,13 +50,13 @@ func main() {
 	redisCache := cache.NewRedisCache(config.RedisURL, "", 0)
 
 	// Initialize repository and service
-	userRepo := repository.NewUserRepository(dbConn, &config, logStreamer)
-	authUserAdminService := service.NewAuthUserAdminService(userRepo, *redisCache, &config, config.JWTSecretKey, logStreamer)
+	userRepo := repository.NewUserRepository(dbConn, &config, logShipper)
+	authUserAdminService := service.NewAuthUserAdminService(userRepo, *redisCache, &config, config.JWTSecretKey, logShipper)
 
 	// Start gRPC server
 	lis, err := net.Listen("tcp", ":"+config.UserGRPCPort)
 	if err != nil {
-		logStreamer.Log(zapcore.ErrorLevel, "GENESISTRACEID", "Failed to listen on port", map[string]any{
+		logShipper.Log(zapcore.ErrorLevel, "GENESISTRACEID", "Failed to listen on port", map[string]any{
 			"port":  config.UserGRPCPort,
 			"error": err.Error(),
 		}, "GRPC INIT", nil)
@@ -72,13 +67,13 @@ func main() {
 	authUserAdminProto.RegisterAuthUserAdminServiceServer(grpcServer, authUserAdminService)
 
 	// Log server startup
-	logStreamer.Log(zapcore.InfoLevel, "GENESISTRACEID", "AuthUserAdminService gRPC server running", map[string]any{
+	logShipper.Log(zapcore.InfoLevel, "GENESISTRACEID", "AuthUserAdminService gRPC server running", map[string]any{
 		"port": config.UserGRPCPort,
 	}, "SERVICE INIT", nil)
 
 	// Start gRPC server
 	if err := grpcServer.Serve(lis); err != nil {
-		logStreamer.Log(zapcore.ErrorLevel, "GENESISTRACEID", "Failed to serve gRPC server", map[string]any{
+		logShipper.Log(zapcore.ErrorLevel, "GENESISTRACEID", "Failed to serve gRPC server", map[string]any{
 			"error": err.Error(),
 		}, "GRPC SERVE", nil)
 		// logger.Fatal("Failed to serve gRPC server", zap.Error(err))

@@ -6,3 +6,7 @@ app.log
 *.log
 
 main
+# Local dev artifacts
+tmp/
+build-errors.log
+

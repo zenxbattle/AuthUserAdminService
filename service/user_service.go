@@ -18,7 +18,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	zap_betterstack "xcode/logger"
+	"xcode/logutil"
 
 	"go.uber.org/zap/zapcore"
 
@@ -34,7 +34,7 @@ import (
 type AuthUserAdminService struct {
 	repo      *repository.UserRepository
 	cache     cache.RedisCache
-	logger    *zap_betterstack.BetterStackLogStreamer
+	logger    *logutil.Logger
 	config    *configs.Config
 	jwtSecret string
 	googleCfg *oauth2.Config
@@ -42,7 +42,7 @@ type AuthUserAdminService struct {
 }
 
 // NewAuthUserAdminService initializes and returns a new AuthUserAdminService
-func NewAuthUserAdminService(repo *repository.UserRepository, cache cache.RedisCache, config *configs.Config, jwtSecret string, logger *zap_betterstack.BetterStackLogStreamer) *AuthUserAdminService {
+func NewAuthUserAdminService(repo *repository.UserRepository, cache cache.RedisCache, config *configs.Config, jwtSecret string, logger *logutil.Logger) *AuthUserAdminService {
 	googleCfg := &oauth2.Config{
 		ClientID:     config.GoogleClientID,
 		ClientSecret: config.GoogleClientSecret,

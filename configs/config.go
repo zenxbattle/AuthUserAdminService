@@ -26,15 +26,13 @@ type Config struct {
 	GoogleRedirectURL      string
 	RedisURL               string
 	ResendAPIKey           string
-	BetterStackSourceToken string
-	BetterStackUploadURL   string
 }
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() Config {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file", err)
+		log.Println("Error loading .env file", err)
 	}
 	config := Config{
 		Environment:        getEnv("ENVIRONMENT", "development"),
@@ -54,9 +52,6 @@ func LoadConfig() Config {
 		GoogleRedirectURL:  getEnv("GOOGLEREDIRECTURL", ""),
 		RedisURL:           getEnv("REDISURL", "localhost:6379"),
 		ResendAPIKey:       getEnv("RESENDAPIKEY", ""),
-
-		BetterStackSourceToken: getEnv("BETTERSTACKSOURCETOKEN", ""),
-		BetterStackUploadURL:   getEnv("BETTERSTACKUPLOADURL", ""),
 	}
 
 	// fmt.Println(config)

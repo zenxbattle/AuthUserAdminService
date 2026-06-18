@@ -16,7 +16,7 @@ import (
 
 	configs "xcode/configs"
 
-	zap_betterstack "xcode/logger"
+	"xcode/logutil"
 
 	"github.com/google/uuid"
 	AuthUserAdminService "github.com/lijuuu/GlobalProtoXcode/AuthUserAdminService"
@@ -30,10 +30,10 @@ import (
 type UserRepository struct {
 	db     *gorm.DB
 	config *configs.Config
-	logger *zap_betterstack.BetterStackLogStreamer
+	logger *logutil.Logger
 }
 
-func NewUserRepository(db *gorm.DB, config *configs.Config, logger *zap_betterstack.BetterStackLogStreamer) *UserRepository {
+func NewUserRepository(db *gorm.DB, config *configs.Config, logger *logutil.Logger) *UserRepository {
 	if db == nil || config == nil {
 		logger.Log(zapcore.FatalLevel, "", "Database or config nil in NewUserRepository", map[string]any{
 			"method": "NewUserRepository",
