@@ -220,6 +220,8 @@ func (s *AuthUserAdminService) LoginWithGoogle(ctx context.Context, req *authUse
 		userId := uuid.New().String()
 		registerReq := &db.User{
 			ID:                userId,
+			UserName:          strings.Split(googleUser.Email, "@")[0][:4] + uuid.New().String()[:4],
+			CreatedAt:         time.Now().Unix(),
 			FirstName:         googleUser.GivenName,
 			LastName:          googleUser.FamilyName,
 			Email:             googleUser.Email,
