@@ -1,4 +1,4 @@
-module xcode
+module zenxbattle
 
 go 1.24.1
 
@@ -7,10 +7,10 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/lijuuu/GlobalProtoXcode v0.0.0-20250826050124-44522759b3b9
 	github.com/pquerna/otp v1.4.0
 	github.com/resend/resend-go/v2 v2.17.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	github.com/zenxbattle/CommonProto v0.1.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.30.0
 	golang.org/x/oauth2 v0.24.0

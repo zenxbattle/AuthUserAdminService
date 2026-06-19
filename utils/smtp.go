@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"xcode/configs"
+	"zenxbattle/configs"
 
 	"github.com/resend/resend-go/v2"
 )

@@ -4,21 +4,21 @@ import (
 	"net"
 	"time"
 
-	"xcode/cache"
-	"xcode/configs"
-	"xcode/db"
-	"xcode/logutil"
-	"xcode/repository"
-	"xcode/service"
+	"zenxbattle/cache"
+	"zenxbattle/configs"
+	"zenxbattle/db"
+	"zenxbattle/logutil"
+	"zenxbattle/repository"
+	"zenxbattle/service"
 
-	authUserAdminProto "github.com/lijuuu/GlobalProtoXcode/AuthUserAdminService"
+	authUserAdminProto "github.com/zenxbattle/CommonProto/AuthUserAdminService"
 	"go.uber.org/zap"
-	"go.uber.org/zapcore"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
 )
 
-func mustConnect(fn func() error, name string, logShipper *logutil.LogShipper, logger *zap.Logger) {
+func mustConnect(fn func() error, name string, logShipper *logutil.Logger, logger *zap.Logger) {
 	for {
 		err := fn()
 		if err == nil {

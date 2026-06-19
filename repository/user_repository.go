@@ -10,16 +10,16 @@ import (
 	"strings"
 	"time"
 
-	"xcode/customerrors"
-	"xcode/db"
-	"xcode/utils"
+	"zenxbattle/customerrors"
+	"zenxbattle/db"
+	"zenxbattle/utils"
 
-	configs "xcode/configs"
+	configs "zenxbattle/configs"
 
-	"xcode/logutil"
+	"zenxbattle/logutil"
 
 	"github.com/google/uuid"
-	AuthUserAdminService "github.com/lijuuu/GlobalProtoXcode/AuthUserAdminService"
+	AuthUserAdminService "github.com/zenxbattle/CommonProto/AuthUserAdminService"
 	"github.com/pquerna/otp/totp"
 	"github.com/skip2/go-qrcode"
 	"go.uber.org/zap/zapcore"
@@ -2421,7 +2421,7 @@ func (r *UserRepository) SetUpTwoFactorAuth(userID string) (string, string, stri
 	}
 
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "XcodePlatform",
+		Issuer:      "ZenxbattlePlatform",
 		AccountName: user.Email,
 	})
 	if err != nil {

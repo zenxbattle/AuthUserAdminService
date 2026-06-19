@@ -7,24 +7,24 @@ import (
 	"strings"
 	"time"
 
-	"xcode/cache"
-	"xcode/db"
-	"xcode/repository"
-	"xcode/utils"
+	"zenxbattle/cache"
+	"zenxbattle/db"
+	"zenxbattle/repository"
+	"zenxbattle/utils"
 
-	configs "xcode/configs"
-	"xcode/customerrors"
+	configs "zenxbattle/configs"
+	"zenxbattle/customerrors"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	"xcode/logutil"
+	"zenxbattle/logutil"
 
 	"go.uber.org/zap/zapcore"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	authUserAdminService "github.com/lijuuu/GlobalProtoXcode/AuthUserAdminService"
+	authUserAdminService "github.com/zenxbattle/CommonProto/AuthUserAdminService"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
